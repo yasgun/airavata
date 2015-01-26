@@ -177,6 +177,9 @@ public class JobExecutionContext extends AbstractContext implements Serializable
      */
     private Map<String, SecurityContext> securityContext = new HashMap<String, SecurityContext>();
 
+    public JobExecutionContext() {
+    }
+
     public JobExecutionContext(GFacConfiguration gFacConfiguration,String applicationName){
         this.gfacConfiguration = gFacConfiguration;
         notifier = new GFacNotifier();

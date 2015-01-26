@@ -71,7 +71,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<axis2.version>1.5.1</axis2.version>
 		<derby.version>10.9.1.0</derby.version>
-		<org.slf4j.version>1.7.6</org.slf4j.version>
+		<org.slf4j.version>1.6.6</org.slf4j.version>
 		<log4j.version>1.2.16</log4j.version>
 		<axiom.version>1.2.8</axiom.version>
 		<surefire.version>2.12</surefire.version>
@@ -513,20 +513,11 @@
 				<module>modules/airavata-client</module>
 				<module>modules/commons</module>
 				<module>modules/gfac</module>
-				<module>modules/workflow-model</module>
 				<module>modules/registry</module>
 				<module>modules/app-catalog</module>
 				<module>modules/security</module>
 				<module>modules/credential-store-service</module>
-				<module>modules/orchestrator</module>
-				<module>tools</module>
-				<module>modules/server</module>
-				<module>modules/test-suite</module>
-				<module>modules/distribution</module>
-				<module>modules/ws-messenger</module>
 				<module>modules/messaging</module>
-				<module>modules/integration-tests</module>
-				<module>modules/xbaya-gui</module>
 			</modules>
 		</profile>
 		<profile>
@@ -599,18 +590,10 @@
 				<module>airavata-api</module>
 				<module>modules/commons</module>
 				<module>modules/gfac</module>
-				<module>modules/ws-messenger</module>
-				<module>modules/workflow-model</module>
 				<module>modules/registry</module>
 				<module>modules/airavata-client</module>
 				<module>modules/security</module>
 				<module>modules/credential-store-service</module>
-				<module>modules/orchestrator</module>
-				<module>tools</module>
-				<module>modules/server</module>
-				<module>modules/test-suite</module>
-				<module>modules/distribution</module>
-				<module>modules/integration-tests</module>
 			</modules>
 		</profile>
 		<!--profile> <id>ec2Tests</id> <build> <plugins> <plugin> <groupId>org.apache.maven.plugins</groupId> 

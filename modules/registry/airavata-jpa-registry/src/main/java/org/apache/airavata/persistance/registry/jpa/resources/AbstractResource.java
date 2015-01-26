@@ -20,6 +20,7 @@
  */
 package org.apache.airavata.persistance.registry.jpa.resources;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +28,7 @@ import org.apache.airavata.persistance.registry.jpa.Resource;
 import org.apache.airavata.persistance.registry.jpa.ResourceType;
 import org.apache.airavata.registry.cpi.RegistryException;
 
-public abstract class AbstractResource implements Resource {
+public abstract class AbstractResource implements Resource, Serializable {
 	// table names
 	public static final String GATEWAY = "Gateway";
 	public static final String CONFIGURATION = "Configuration";

@@ -768,6 +768,20 @@ public class GFacUtils {
 		}
 	}
 
+	public static void saveJobStatus(Registry registry,
+									 JobDetails details,String taskId, JobState state) throws GFacException {
+		try {
+			JobStatus status = new JobStatus();
+			status.setJobState(state);
+			details.setJobStatus(status);
+			registry.add(ChildDataType.JOB_DETAIL, details,
+					new CompositeIdentifier(taskId, details.getJobID()));
+		} catch (Exception e) {
+			throw new GFacException("Error persisting job status"
+					+ e.getLocalizedMessage(), e);
+		}
+	}
+
 	public static void updateJobStatus(JobExecutionContext jobExecutionContext,
 			JobDetails details, JobState state) throws GFacException {
 		try {

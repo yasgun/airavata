@@ -56,6 +56,11 @@
             <artifactId>airavata-client-configuration</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>3.3.5</version>
+        </dependency>
     </dependencies>
 
 </project>

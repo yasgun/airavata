@@ -21,6 +21,7 @@
 
 package org.apache.airavata.persistance.registry.jpa.impl;
 
+import java.io.Serializable;
 import java.util.*;
 
 import org.apache.airavata.common.utils.AiravataUtils;
@@ -34,7 +35,7 @@ import org.apache.airavata.registry.cpi.utils.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ProjectRegistry {
+public class ProjectRegistry implements Serializable {
     private GatewayResource gatewayResource;
     private WorkerResource workerResource;
     private final static Logger logger = LoggerFactory.getLogger(ProjectRegistry.class);

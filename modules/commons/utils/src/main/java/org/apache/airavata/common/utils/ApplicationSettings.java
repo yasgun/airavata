@@ -85,13 +85,7 @@ public class ApplicationSettings {
 	}
 
 	protected URL getPropertyFileURL() {
-		URL url;
-		if (AiravataUtils.isClient()){
-            url=ApplicationSettings.class.getClassLoader().getResource(CLIENT_PROPERTIES);
-        }else{
-            url=ApplicationSettings.class.getClassLoader().getResource(SERVER_PROPERTIES);
-        }
-		return url;
+            return ApplicationSettings.class.getClassLoader().getResource(SERVER_PROPERTIES);
 	}
 	
 	protected URL[] getExternalSettingsFileURLs(){

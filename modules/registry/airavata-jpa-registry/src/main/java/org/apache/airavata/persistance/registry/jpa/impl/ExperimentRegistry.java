@@ -38,10 +38,11 @@ import org.apache.airavata.registry.cpi.RegistryModelType;
 import org.apache.airavata.registry.cpi.utils.Constants;
 import org.apache.airavata.registry.cpi.utils.StatusType;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.*;
 
-public class ExperimentRegistry {
+public class ExperimentRegistry implements Serializable{
     private GatewayResource gatewayResource;
     private WorkerResource workerResource;
     private final static AiravataLogger logger = AiravataLoggerFactory.getLogger(ExperimentRegistry.class);

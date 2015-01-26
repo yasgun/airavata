@@ -33,11 +33,12 @@ import org.apache.airavata.registry.cpi.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class RegistryImpl implements Registry {
+public class RegistryImpl implements Registry,Serializable {
     private GatewayResource gatewayResource;
     private UserResource user;
     private final static Logger logger = LoggerFactory.getLogger(RegistryImpl.class);
@@ -62,6 +63,7 @@ public class RegistryImpl implements Registry {
             experimentRegistry = new ExperimentRegistry(gatewayResource, user);
             projectRegistry = new ProjectRegistry(gatewayResource, user);
         } catch (ApplicationSettingsException e) {
+            e.printStackTrace();
             logger.error("Unable to read airavata server properties..", e);
         }
     }

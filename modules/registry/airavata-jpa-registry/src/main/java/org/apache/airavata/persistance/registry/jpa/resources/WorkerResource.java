@@ -33,13 +33,14 @@ import org.apache.airavata.registry.cpi.RegistryException;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public class WorkerResource extends AbstractResource {
+public class WorkerResource extends AbstractResource implements Serializable {
     private final static Logger logger = LoggerFactory.getLogger(WorkerResource.class);
     private String user;
 	private GatewayResource gateway;

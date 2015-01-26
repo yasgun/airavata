@@ -21,6 +21,9 @@
 
 package org.apache.airavata.client.samples;
 
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 import org.apache.airavata.api.Airavata;
 import org.apache.airavata.api.client.AiravataClientFactory;
 import org.apache.airavata.client.tools.RegisterSampleApplications;
@@ -57,7 +60,7 @@ public class CreateLaunchExperiment {
     private static final String DEFAULT_GATEWAY = "default.registry.gateway";
     private static Airavata.Client airavataClient;
 
-    private static String echoAppId = "Echo_0018dc21-9359-4063-9672-6ad15a24294d";
+    private static String echoAppId = "Echo_53cd4995-1a3b-4290-9615-2592a59051b8";
     private static String mpiAppId = "HelloMPI_da45305f-5d90-4a18-8716-8dd54c3b2376";
     private static String wrfAppId = "WRF_7ad5da38-c08b-417c-a9ea-da9298839762";
     private static String amberAppId = "Amber_49b16f6f-93ab-4885-9971-6ab2ab5eb3d3";
@@ -94,11 +97,11 @@ public class CreateLaunchExperiment {
         try {
             for (int i = 0; i < 1; i++) {
 //                final String expId = createExperimentForSSHHost(airavata);
-                final String expId = createEchoExperimentForFSD(airavataClient);
+//                final String expId = createEchoExperimentForFSD(airavataClient);
 //                final String expId = createMPIExperimentForFSD(airavataClient);
 //                final String expId = createEchoExperimentForStampede(airavataClient);
 //                final String expId = createEchoExperimentForTrestles(airavataClient);
-//                final String expId = createExperimentEchoForLocalHost(airavataClient);
+                final String expId = createExperimentEchoForLocalHost(airavataClient);
 //                final String expId = createExperimentWRFTrestles(airavataClient);
 //                final String expId = createExperimentForBR2(airavataClient);
 //                final String expId = createExperimentForBR2Amber(airavataClient);
@@ -113,7 +116,7 @@ public class CreateLaunchExperiment {
 //                final String expId = createExperimentAUTODOCKStampede(airavataClient); // this is not working , we need to register AutoDock app on stampede
                 System.out.println("Experiment ID : " + expId);
 //                updateExperiment(airavata, expId);
-                launchExperiment(airavataClient, expId);
+//                launchExperimentPassive(expId);
             }
         } catch (Exception e) {
             logger.error("Error while connecting with server", e.getMessage());
@@ -1553,6 +1556,16 @@ public class CreateLaunchExperiment {
         return null;
     }
 
+    public static void launchExperiment(String expId)
+            throws TException {
+        try {
+            String gatewayId = "default";
+        } catch (Exception e) {
+            logger.error("Error occured while launching the experiment...", e.getMessage());
+            throw new TException(e);
+        }
+    }
+
     public static void launchExperiment(Airavata.Client client, String expId)
             throws TException {
         try {
@@ -1575,6 +1588,33 @@ public class CreateLaunchExperiment {
             logger.error("Error occured while launching the experiment...", e.getMessage());
             throw new TException(e);
         }
+    }
+
+    public static void launchExperimentPassive(String expId)
+            throws TException {
+        try {
+            String uri = "amqp://localhost";
+            String message = expId;
+            String exchange = "airavata_rabbitmq_exchange";
+
+            ConnectionFactory cfconn = new ConnectionFactory();
+            cfconn.setUri(uri);
+            Connection conn = cfconn.newConnection();
+
+            Channel ch = conn.createChannel();
+
+            if (exchange.equals("")) {
+                ch.queueDeclare("gfac.submit", false, false, false, null);
+            }
+            ch.basicPublish(exchange, expId, null, message.getBytes());
+            ch.close();
+            conn.close();
+        } catch (Exception e) {
+            System.err.println("Main thread caught exception: " + e);
+            e.printStackTrace();
+            System.exit(1);
+        }
+
     }
 
     public static List<Experiment> getExperimentsForUser(Airavata.Client client, String user) {

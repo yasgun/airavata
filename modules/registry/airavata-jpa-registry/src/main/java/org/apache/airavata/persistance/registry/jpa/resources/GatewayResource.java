@@ -20,6 +20,7 @@
 */
 package org.apache.airavata.persistance.registry.jpa.resources;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +36,7 @@ import org.apache.airavata.registry.cpi.RegistryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GatewayResource extends AbstractResource {
+public class GatewayResource extends AbstractResource implements Serializable {
     private final static Logger logger = LoggerFactory.getLogger(GatewayResource.class);
     private String gatewayName;
     private String owner;
