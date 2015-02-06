@@ -32,7 +32,8 @@
             </activation>
             <modules>
                 <module>gfac-core</module>
-		<module>storm-starter</module>
+		        <module>storm-starter</module>
+                <module>gfac-local</module>
             </modules>
         </profile>
     </profiles>
