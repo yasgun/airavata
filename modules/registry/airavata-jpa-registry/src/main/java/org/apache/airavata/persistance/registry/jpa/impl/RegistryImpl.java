@@ -65,6 +65,7 @@ public class RegistryImpl implements Registry,Serializable {
         } catch (ApplicationSettingsException e) {
             e.printStackTrace();
             logger.error("Unable to read airavata server properties..", e);
+            throw new RegistryException("Unable to read airavata server properties..", e);
         }
     }
 

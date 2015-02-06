@@ -129,7 +129,7 @@ public class GSISSHOutputHandler extends AbstractRecoverableHandler {
                 data.append(oldFiles.get(index++)).append(",");
             } else {
             	int i = 0;
-                localStdOutFile = new File(outputDataDir + File.separator + timeStampedExperimentID + "stdout");
+                localStdOutFile = new File(outputDataDir + File.separator + jobExecutionContext.getApplicationName() + ".stdout");
                 while(stdOutStr.isEmpty()){
                 try {
                 	cluster.scpFrom(jobExecutionContext.getStandardOutput(), localStdOutFile.getAbsolutePath());
@@ -149,7 +149,7 @@ public class GSISSHOutputHandler extends AbstractRecoverableHandler {
                 localStdErrFile = new File(oldFiles.get(index));
                 data.append(oldFiles.get(index++)).append(",");
             } else {
-                localStdErrFile = new File(outputDataDir + File.separator + timeStampedExperimentID + "stderr");
+                localStdErrFile = new File(outputDataDir + File.separator + jobExecutionContext.getApplicationName() + ".stderr");
                 cluster.scpFrom(jobExecutionContext.getStandardError(), localStdErrFile.getAbsolutePath());
                 StringBuffer temp = new StringBuffer(data.append(localStdErrFile.getAbsolutePath()).append(",").toString());
                 GFacUtils.savePluginData(jobExecutionContext, temp.insert(0, ++index), this.getClass().getName());
@@ -158,12 +158,12 @@ public class GSISSHOutputHandler extends AbstractRecoverableHandler {
             String stdErrStr = GFacUtils.readFileToString(localStdErrFile.getAbsolutePath());
             status.setTransferState(TransferState.STDOUT_DOWNLOAD);
             detail.setTransferStatus(status);
-            detail.setTransferDescription("STDOUT:" + stdOutStr);
+            detail.setTransferDescription("STDOUT:" + localStdOutFile.getAbsolutePath());
             registry.add(ChildDataType.DATA_TRANSFER_DETAIL, detail, jobExecutionContext.getTaskData().getTaskID());
 
             status.setTransferState(TransferState.STDERROR_DOWNLOAD);
             detail.setTransferStatus(status);
-            detail.setTransferDescription("STDERR:" + stdErrStr);
+            detail.setTransferDescription("STDERR:" + localStdErrFile.getAbsolutePath());
             registry.add(ChildDataType.DATA_TRANSFER_DETAIL, detail, jobExecutionContext.getTaskData().getTaskID());
 
             //todo this is a mess we have to fix this
@@ -216,6 +216,42 @@ public class GSISSHOutputHandler extends AbstractRecoverableHandler {
                                 dataObjectType.setName(key);
                                 dataObjectType.setType(DataType.URI);
                                 outputArray.add(dataObjectType);
+                            }else if (DataType.STDOUT == outputDataObjectType1.getType()) {
+                                String localFile;
+                                if (index < oldIndex) {
+                                    localFile = oldFiles.get(index);
+                                    data.append(oldFiles.get(index++)).append(",");
+                                } else {
+                                    String fileName = localStdOutFile.getName();
+                                    localFile = outputDataDir + File.separator + fileName;
+                                    StringBuffer temp = new StringBuffer(data.append(localFile).append(",").toString());
+                                    GFacUtils.savePluginData(jobExecutionContext, temp.insert(0, ++index), this.getClass().getName());
+                                }
+                                jobExecutionContext.addOutputFile(localFile);
+                                outputDataObjectType1.setValue(localFile);
+                                OutputDataObjectType dataObjectType = new OutputDataObjectType();
+                                dataObjectType.setValue(localFile);
+                                dataObjectType.setName(key);
+                                dataObjectType.setType(DataType.STDOUT);
+                                outputArray.add(dataObjectType);
+                            }else if (DataType.STDERR == outputDataObjectType1.getType()) {
+                                String localFile;
+                                if (index < oldIndex) {
+                                    localFile = oldFiles.get(index);
+                                    data.append(oldFiles.get(index++)).append(",");
+                                } else {
+                                    String fileName = localStdErrFile.getName();
+                                    localFile = outputDataDir + File.separator + fileName;
+                                    StringBuffer temp = new StringBuffer(data.append(localFile).append(",").toString());
+                                    GFacUtils.savePluginData(jobExecutionContext, temp.insert(0, ++index), this.getClass().getName());
+                                }
+                                jobExecutionContext.addOutputFile(localFile);
+                                outputDataObjectType1.setValue(localFile);
+                                OutputDataObjectType dataObjectType = new OutputDataObjectType();
+                                dataObjectType.setValue(localFile);
+                                dataObjectType.setName(key);
+                                dataObjectType.setType(DataType.STDERR);
+                                outputArray.add(dataObjectType);
                             }
                         }
                         break;
@@ -242,7 +278,7 @@ public class GSISSHOutputHandler extends AbstractRecoverableHandler {
                     }
                 } else {
                     OutputUtils.fillOutputFromStdout(output, stdOutStr, stdErrStr, outputArray);
-                    break;
+//                    break;
                 }
             }
             if (outputArray == null || outputArray.isEmpty()) {

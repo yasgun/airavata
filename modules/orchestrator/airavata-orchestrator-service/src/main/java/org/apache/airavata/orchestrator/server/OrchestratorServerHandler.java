@@ -34,6 +34,8 @@ import org.apache.airavata.common.utils.AiravataUtils;
 import org.apache.airavata.common.utils.AiravataZKUtils;
 import org.apache.airavata.common.utils.Constants;
 import org.apache.airavata.common.utils.ServerSettings;
+import org.apache.airavata.credential.store.credential.impl.certificate.CertificateCredential;
+import org.apache.airavata.credential.store.store.CredentialReader;
 import org.apache.airavata.gfac.core.scheduler.HostScheduler;
 import org.apache.airavata.gfac.core.utils.GFacUtils;
 import org.apache.airavata.messaging.core.MessageContext;
@@ -97,7 +99,7 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface,
 		return orchestrator_cpi_serviceConstants.ORCHESTRATOR_CPI_VERSION;
 	}
 
-	public OrchestratorServerHandler() {
+	public OrchestratorServerHandler() throws OrchestratorException{
 		// registering with zk
 		try {
 			if (ServerSettings.isRabbitMqPublishEnabled()) {
@@ -109,7 +111,8 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface,
 					+ ":"
 					+ ServerSettings
 							.getSetting(Constants.ORCHESTRATOR_SERVER_PORT);
-            setGatewayName(ServerSettings.getDefaultUserGateway());
+			
+//            setGatewayName(ServerSettings.getDefaultUserGateway());
             setAiravataUserName(ServerSettings.getDefaultUser());
 			try {
 				zk = new ZooKeeper(zkhostPort, 6000, this); // no watcher is
@@ -129,16 +132,21 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface,
 						this);
 				log.info("Finished starting ZK: " + zk);
 			} catch (IOException e) {
-				e.printStackTrace();
+                log.error(e.getMessage(), e);
+                throw new OrchestratorException("Error while initializing orchestrator service", e);
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+                log.error(e.getMessage(), e);
+                throw new OrchestratorException("Error while initializing orchestrator service", e);
 			} catch (KeeperException e) {
-				e.printStackTrace();
+                log.error(e.getMessage(), e);
+                throw new OrchestratorException("Error while initializing orchestrator service", e);
 			}
 		} catch (ApplicationSettingsException e) {
-			e.printStackTrace();
+            log.error(e.getMessage(), e);
+            throw new OrchestratorException("Error while initializing orchestrator service", e);
 		}catch (AiravataException e) {
-			e.printStackTrace();
+            log.error(e.getMessage(), e);
+            throw new OrchestratorException("Error while initializing orchestrator service", e);
 		}
 		// orchestrator init
 		try {
@@ -149,9 +157,11 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface,
 			orchestrator.initialize();
 			orchestrator.getOrchestratorContext().setZk(this.zk);
 		} catch (OrchestratorException e) {
-			e.printStackTrace();
+            log.error(e.getMessage(), e);
+            throw new OrchestratorException("Error while initializing orchestrator service", e);
 		} catch (RegistryException e) {
-			e.printStackTrace();
+            log.error(e.getMessage(), e);
+            throw new OrchestratorException("Error while initializing orchestrator service", e);
 		}
 	}
 
@@ -669,7 +679,18 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface,
                         experiment.setExperimentStatus(status);
                         registry.update(RegistryModelType.EXPERIMENT_STATUS, status, experimentId);
                         if (ServerSettings.isRabbitMqPublishEnabled()) {
-                            String gatewayId = ServerSettings.getDefaultUserGateway();
+                        	 String gatewayId = null;
+                        	 CredentialReader credentialReader = GFacUtils.getCredentialReader();
+                             if (credentialReader != null) {
+                                 try {
+                                	 gatewayId = credentialReader.getGatewayID(airavataCredStoreToken);
+                                 } catch (Exception e) {
+                                     log.error(e.getLocalizedMessage());
+                                 }
+                             }
+                            if(gatewayId == null || gatewayId.isEmpty()){
+                             gatewayId = ServerSettings.getDefaultUserGateway();
+                            }
                             ExperimentStatusChangeEvent event = new ExperimentStatusChangeEvent(ExperimentState.LAUNCHED,
                                     experimentId,
                                     gatewayId);

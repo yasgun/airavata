@@ -41,25 +41,43 @@ public class ApplicationOutputResource extends AbstractResource {
     private String outputKey;
     private String dataType;
     private String value;
-    private String validityType;
+    private boolean isRequired;
     private boolean dataMovement;
     private String dataNameLocation;
-    private String commandLineType;
+    private boolean requiredToCMD;
+    private String searchQuery;
+    private String appArgument;
 
-    public String getCommandLineType() {
-        return commandLineType;
+    public String getSearchQuery() {
+        return searchQuery;
     }
 
-    public void setCommandLineType(String commandLineType) {
-        this.commandLineType = commandLineType;
+    public void setSearchQuery(String searchQuery) {
+        this.searchQuery = searchQuery;
     }
 
-    public String getValidityType() {
-        return validityType;
+    public String getAppArgument() {
+        return appArgument;
     }
 
-    public void setValidityType(String validityType) {
-        this.validityType = validityType;
+    public void setAppArgument(String appArgument) {
+        this.appArgument = appArgument;
+    }
+
+    public boolean isRequired() {
+        return isRequired;
+    }
+
+    public void setRequired(boolean isRequired) {
+        this.isRequired = isRequired;
+    }
+
+    public boolean isRequiredToCMD() {
+        return requiredToCMD;
+    }
+
+    public void setRequiredToCMD(boolean requiredToCMD) {
+        this.requiredToCMD = requiredToCMD;
     }
 
     public boolean isDataMovement() {
@@ -150,10 +168,12 @@ public class ApplicationOutputResource extends AbstractResource {
             applicationOutput.setTaskId(taskDetail.getTaskId());
             applicationOutput.setOutputKey(outputKey);
             applicationOutput.setDataType(dataType);
-            applicationOutput.setValidityType(validityType);
-            applicationOutput.setCommandLineType(commandLineType);
+            applicationOutput.setRequired(isRequired);
+            applicationOutput.setAddedToCmd(requiredToCMD);
             applicationOutput.setDataMovement(dataMovement);
             applicationOutput.setDataNameLocation(dataNameLocation);
+            applicationOutput.setSearchQuery(searchQuery);
+            applicationOutput.setApplicationArgument(appArgument);
             if (value != null){
                 applicationOutput.setValue(value.toCharArray());
             }
@@ -163,10 +183,12 @@ public class ApplicationOutputResource extends AbstractResource {
                 existingOutput.setTaskId(taskDetail.getTaskId());
                 existingOutput.setOutputKey(outputKey);
                 existingOutput.setDataType(dataType);
-                existingOutput.setValidityType(validityType);
-                existingOutput.setCommandLineType(commandLineType);
+                existingOutput.setRequired(isRequired);
+                existingOutput.setAddedToCmd(requiredToCMD);
                 existingOutput.setDataMovement(dataMovement);
                 existingOutput.setDataNameLocation(dataNameLocation);
+                existingOutput.setSearchQuery(searchQuery);
+                existingOutput.setApplicationArgument(appArgument);
                 if (value != null){
                     existingOutput.setValue(value.toCharArray());
                 }

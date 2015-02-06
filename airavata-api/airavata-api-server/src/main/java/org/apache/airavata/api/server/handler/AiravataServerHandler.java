@@ -2585,6 +2585,20 @@ public class AiravataServerHandler implements Airavata.Iface {
         }
     }
 
+    @Override
+    public List<GatewayResourceProfile> getAllGatewayComputeResources() throws InvalidRequestException, AiravataClientException, AiravataSystemException, TException {
+        try {
+            appCatalog = AppCatalogFactory.getAppCatalog();
+            GwyResourceProfile gatewayProfile = appCatalog.getGatewayProfile();
+            return gatewayProfile.getAllGatewayProfiles();
+        } catch (AppCatalogException e) {
+            AiravataSystemException exception = new AiravataSystemException();
+            exception.setAiravataErrorType(AiravataErrorType.INTERNAL_ERROR);
+            exception.setMessage("Error while reading retrieving all gateway profiles. More info : " + e.getMessage());
+            throw exception;
+        }
+    }
+
     /**
      * Update a Compute Resource Preference to a registered gateway profile.
      *
@@ -2637,21 +2651,7 @@ public class AiravataServerHandler implements Airavata.Iface {
     	try {
             appCatalog = AppCatalogFactory.getAppCatalog();
             GwyResourceProfile gatewayProfile = appCatalog.getGatewayProfile();
-            GatewayResourceProfile profile = gatewayProfile.getGatewayProfile(gatewayID);
-            List<ComputeResourcePreference> computeResourcePreferences = profile.getComputeResourcePreferences();
-            ComputeResourcePreference preferenceToRemove = null;
-            for (ComputeResourcePreference preference : computeResourcePreferences) {
-				if (preference.getComputeResourceId().equals(computeResourceId)){
-					preferenceToRemove=preference;
-					break;
-				}
-			}
-            if (preferenceToRemove!=null) {
-				profile.getComputeResourcePreferences().remove(
-						preferenceToRemove);
-			}
-            gatewayProfile.updateGatewayResourceProfile(gatewayID, profile);
-            return true;
+            return gatewayProfile.removeComputeResourcePreferenceFromGateway(gatewayID, computeResourceId);
         } catch (AppCatalogException e) {
             logger.errorId(gatewayID, "Error while reading gateway compute resource preference...", e);
             AiravataSystemException exception = new AiravataSystemException();

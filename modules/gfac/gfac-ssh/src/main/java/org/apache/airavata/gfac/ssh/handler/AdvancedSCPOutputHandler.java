@@ -22,7 +22,6 @@ package org.apache.airavata.gfac.ssh.handler;
 
 import org.apache.airavata.common.exception.ApplicationSettingsException;
 import org.apache.airavata.gfac.GFacException;
-import org.apache.airavata.gfac.SecurityContext;
 import org.apache.airavata.gfac.core.context.JobExecutionContext;
 import org.apache.airavata.gfac.core.handler.AbstractHandler;
 import org.apache.airavata.gfac.core.handler.GFacHandlerException;
@@ -146,9 +145,9 @@ public class AdvancedSCPOutputHandler extends AbstractHandler {
                 OutputDataObjectType outputDataObjectType = (OutputDataObjectType) output.get(paramName);
                 if (outputDataObjectType.getType() == DataType.URI) {
                 	String downloadFile = outputDataObjectType.getValue();
-                	if(downloadFile == null || !(new File(downloadFile).isFile())){
+                    if(downloadFile == null || !(new File(downloadFile).isFile())){
                         GFacUtils.saveErrorDetails(jobExecutionContext, "Empty Output returned from the application", CorrectiveAction.CONTACT_SUPPORT, ErrorCategory.AIRAVATA_INTERNAL_ERROR);
-                		throw new GFacHandlerException("Empty Output returned from the application");
+                		throw new GFacHandlerException("Empty Output returned from the application.." );
                 	}
                 	pbsCluster.scpTo(outputPath, downloadFile);
                     String fileName = downloadFile.substring(downloadFile.lastIndexOf(File.separatorChar)+1, downloadFile.length());
@@ -156,6 +155,34 @@ public class AdvancedSCPOutputHandler extends AbstractHandler {
                     dataObjectType.setValue(outputPath + File.separatorChar + fileName);
                     dataObjectType.setName(paramName);
                     dataObjectType.setType(DataType.URI);
+                    dataObjectType.setIsRequired(outputDataObjectType.isIsRequired());
+                    dataObjectType.setRequiredToAddedToCommandLine(outputDataObjectType.isRequiredToAddedToCommandLine());
+                    dataObjectType.setApplicationArgument(outputDataObjectType.getApplicationArgument());
+                    dataObjectType.setSearchQuery(outputDataObjectType.getSearchQuery());
+                    outputArray.add(dataObjectType);
+                }else if (outputDataObjectType.getType() == DataType.STDOUT) {
+                    pbsCluster.scpTo(outputPath, standardOutput);
+                    String fileName = standardOutput.substring(standardOutput.lastIndexOf(File.separatorChar)+1, standardOutput.length());
+                    OutputDataObjectType dataObjectType = new OutputDataObjectType();
+                    dataObjectType.setValue(outputPath + File.separatorChar + fileName);
+                    dataObjectType.setName(paramName);
+                    dataObjectType.setType(DataType.STDOUT);
+                    dataObjectType.setIsRequired(outputDataObjectType.isIsRequired());
+                    dataObjectType.setRequiredToAddedToCommandLine(outputDataObjectType.isRequiredToAddedToCommandLine());
+                    dataObjectType.setApplicationArgument(outputDataObjectType.getApplicationArgument());
+                    dataObjectType.setSearchQuery(outputDataObjectType.getSearchQuery());
+                    outputArray.add(dataObjectType);
+                }else if (outputDataObjectType.getType() == DataType.STDERR) {
+                    pbsCluster.scpTo(outputPath, standardError);
+                    String fileName = standardError.substring(standardError.lastIndexOf(File.separatorChar)+1, standardError.length());
+                    OutputDataObjectType dataObjectType = new OutputDataObjectType();
+                    dataObjectType.setValue(outputPath + File.separatorChar + fileName);
+                    dataObjectType.setName(paramName);
+                    dataObjectType.setType(DataType.STDERR);
+                    dataObjectType.setIsRequired(outputDataObjectType.isIsRequired());
+                    dataObjectType.setRequiredToAddedToCommandLine(outputDataObjectType.isRequiredToAddedToCommandLine());
+                    dataObjectType.setApplicationArgument(outputDataObjectType.getApplicationArgument());
+                    dataObjectType.setSearchQuery(outputDataObjectType.getSearchQuery());
                     outputArray.add(dataObjectType);
                 }
              }

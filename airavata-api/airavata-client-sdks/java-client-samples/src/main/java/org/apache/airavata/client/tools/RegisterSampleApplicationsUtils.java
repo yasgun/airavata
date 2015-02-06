@@ -57,7 +57,9 @@ public class RegisterSampleApplicationsUtils {
                                                                                String executablePath,
                                                                                ApplicationParallelismType parallelism,
                                                                                String appDeploymentDescription,
-                                                                               List<String> moduleLoadCmds) {
+                                                                               List<String> moduleLoadCmds,
+                                                                               List<String> preJobCmds,
+                                                                               List<String> postJobCmds) {
         ApplicationDeploymentDescription deployment = new ApplicationDeploymentDescription();
 //		deployment.setIsEmpty(false);
         deployment.setAppDeploymentDescription(appDeploymentDescription);
@@ -66,6 +68,8 @@ public class RegisterSampleApplicationsUtils {
         deployment.setExecutablePath(executablePath);
         deployment.setParallelism(parallelism);
         deployment.setModuleLoadCmds(moduleLoadCmds);
+        deployment.setPreJobCommands(preJobCmds);
+        deployment.setPostJobCommands(postJobCmds);
         return deployment;
     }
 
@@ -124,8 +128,8 @@ public class RegisterSampleApplicationsUtils {
                                                       DataType type,
                                                       String applicationArgument,
                                                       int order,
-                                                      ValidityType validityType,
-                                                      CommandLineType commandLineType,
+                                                      boolean isRequired,
+                                                      boolean requiredToCMD,
                                                       boolean stdIn,
                                                       String description,
                                                       String metadata) {
@@ -136,12 +140,8 @@ public class RegisterSampleApplicationsUtils {
         if (type != null) input.setType(type);
         if (applicationArgument != null) input.setApplicationArgument(applicationArgument);
         input.setInputOrder(order);
-        if (validityType != null){
-            input.setInputValid(validityType);
-        }
-        if (commandLineType != null){
-            input.setAddedToCommandLine(commandLineType);
-        }
+        input.setIsRequired(isRequired);
+        input.setRequiredToAddedToCommandLine(requiredToCMD);
         if (description != null) input.setUserFriendlyDescription(description);
         input.setStandardInput(stdIn);
         if (metadata != null) input.setMetaData(metadata);
@@ -151,19 +151,15 @@ public class RegisterSampleApplicationsUtils {
     public static OutputDataObjectType createAppOutput(String inputName,
                                                        String value,
                                                        DataType type,
-                                                       ValidityType validityType,
-                                                       CommandLineType commandLineType) {
+                                                       boolean isRequired,
+                                                       boolean requiredToCMD) {
         OutputDataObjectType outputDataObjectType = new OutputDataObjectType();
 //        outputDataObjectType.setIsEmpty(false);
         if (inputName != null) outputDataObjectType.setName(inputName);
         if (value != null) outputDataObjectType.setValue(value);
         if (type != null) outputDataObjectType.setType(type);
-        if (validityType != null){
-            outputDataObjectType.setValidityType(validityType);
-        }
-        if (commandLineType != null){
-            outputDataObjectType.setAddedToCommandLine(commandLineType);
-        }
+        outputDataObjectType.setIsRequired(isRequired);
+        outputDataObjectType.setRequiredToAddedToCommandLine(requiredToCMD);
         return outputDataObjectType;
     }
 

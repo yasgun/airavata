@@ -231,6 +231,20 @@ public class JobDescriptor {
         this.getJobDescriptorDocument().getJobDescriptor().getPostJobCommands().setCommandArray(commands);
     }
 
+    public void setModuleLoadCommands(String[] commands) {
+        if (this.getJobDescriptorDocument().getJobDescriptor().getModuleLoadCommands() == null) {
+            this.getJobDescriptorDocument().getJobDescriptor().addNewModuleLoadCommands();
+        }
+        this.getJobDescriptorDocument().getJobDescriptor().getModuleLoadCommands().setCommandArray(commands);
+    }
+
+    public void addModuleLoadCommands(String command) {
+        if (this.getJobDescriptorDocument().getJobDescriptor().getModuleLoadCommands() == null) {
+            this.getJobDescriptorDocument().getJobDescriptor().addNewModuleLoadCommands();
+        }
+        this.getJobDescriptorDocument().getJobDescriptor().getModuleLoadCommands().addCommand(command);
+    }
+
     public void addPreJobCommand(String command){
         if(this.getJobDescriptorDocument().getJobDescriptor().getPreJobCommands() == null){
             this.getJobDescriptorDocument().getJobDescriptor().addNewPreJobCommands();
@@ -383,6 +397,13 @@ public class JobDescriptor {
         return null;
     }
 
+    public String[] getModuleCommands() {
+        if (this.getJobDescriptorDocument().getJobDescriptor().getModuleLoadCommands() != null) {
+            return this.getJobDescriptorDocument().getJobDescriptor().getModuleLoadCommands().getCommandArray();
+        }
+        return null;
+    }
+
     public String[] getPreJobCommands(){
         if(this.getJobDescriptorDocument().getJobDescriptor().getPreJobCommands() != null) {
             return this.getJobDescriptorDocument().getJobDescriptor().getPreJobCommands().getCommandArray();
@@ -418,6 +439,21 @@ public class JobDescriptor {
         return this.jobDescriptionDocument.getJobDescriptor().getCallBackPort();
     }
 
+    public void setMailType(String emailType) {
+        this.getJobDescriptorDocument().getJobDescriptor().setMailType(emailType);
+    }
+
+    public String getMailType() {
+        return this.getJobDescriptorDocument().getJobDescriptor().getMailType();
+    }
+    public void setMailAddress(String emailAddress) {
+        this.getJobDescriptorDocument().getJobDescriptor().setMailAddress(emailAddress);
+    }
+
+    public String getMailAddress() {
+        return this.getJobDescriptorDocument().getJobDescriptor().getMailAddress();
+    }
+    
 
 }
 

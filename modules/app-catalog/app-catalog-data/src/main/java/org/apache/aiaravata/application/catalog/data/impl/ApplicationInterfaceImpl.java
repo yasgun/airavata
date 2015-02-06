@@ -104,19 +104,27 @@ public class ApplicationInterfaceImpl implements ApplicationInterface {
                     inputResource.setStandardInput(input.isStandardInput());
                     inputResource.setAppArgument(input.getApplicationArgument());
                     inputResource.setInputOrder(input.getInputOrder());
+                    inputResource.setRequired(input.isIsRequired());
+                    inputResource.setRequiredToCMD(input.isRequiredToAddedToCommandLine());
                     inputResource.save();
                 }
             }
 
             List<OutputDataObjectType> applicationOutputs = applicationInterfaceDescription.getApplicationOutputs();
-            if (applicationOutputs != null && !applicationOutputs.isEmpty()){
-                for (OutputDataObjectType output : applicationOutputs){
+            if (applicationOutputs != null && !applicationOutputs.isEmpty()) {
+                for (OutputDataObjectType output : applicationOutputs) {
                     ApplicationOutputResource outputResource = new ApplicationOutputResource();
                     outputResource.setInterfaceID(resource.getInterfaceId());
                     outputResource.setAppInterfaceResource(resource);
                     outputResource.setOutputKey(output.getName());
                     outputResource.setOutputVal(output.getValue());
                     outputResource.setDataType(output.getType().toString());
+                    outputResource.setRequired(output.isIsRequired());
+                    outputResource.setRequiredToCMD(output.isRequiredToAddedToCommandLine());
+                    outputResource.setDataMovement(output.isDataMovement());
+                    outputResource.setDataNameLocation(output.getLocation());
+                    outputResource.setAppArgument(output.getApplicationArgument());
+                    outputResource.setSearchQuery(output.getSearchQuery());
                     outputResource.save();
                 }
             }
@@ -220,6 +228,8 @@ public class ApplicationInterfaceImpl implements ApplicationInterface {
                     inputResource.setStandardInput(input.isStandardInput());
                     inputResource.setAppArgument(input.getApplicationArgument());
                     inputResource.setInputOrder(input.getInputOrder());
+                    inputResource.setRequired(input.isIsRequired());
+                    inputResource.setRequiredToCMD(input.isRequiredToAddedToCommandLine());
                     inputResource.save();
                 }
             }
@@ -244,6 +254,12 @@ public class ApplicationInterfaceImpl implements ApplicationInterface {
                     outputResource.setOutputKey(output.getName());
                     outputResource.setOutputVal(output.getValue());
                     outputResource.setDataType(output.getType().toString());
+                    outputResource.setRequired(output.isIsRequired());
+                    outputResource.setRequiredToCMD(output.isRequiredToAddedToCommandLine());
+                    outputResource.setDataMovement(output.isDataMovement());
+                    outputResource.setDataNameLocation(output.getLocation());
+                    outputResource.setAppArgument(output.getApplicationArgument());
+                    outputResource.setSearchQuery(output.getSearchQuery());
                     outputResource.save();
                 }
             }

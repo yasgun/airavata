@@ -44,10 +44,12 @@ public class ApplicationOutputResource extends AbstractResource {
     private String outputKey;
     private String outputVal;
     private String dataType;
-    private String validityType;
+    private boolean isRequired;
     private boolean dataMovement;
     private String dataNameLocation;
-    private String commandLineType;
+    private boolean requiredToCMD;
+    private String searchQuery;
+    private String appArgument;
 
     private AppInterfaceResource appInterfaceResource;
 
@@ -287,10 +289,12 @@ public class ApplicationOutputResource extends AbstractResource {
             applicationOutput.setDataType(dataType);
             applicationOutput.setOutputKey(outputKey);
             applicationOutput.setOutputVal(outputVal);
-            applicationOutput.setValidityType(validityType);
-            applicationOutput.setCommandLineType(commandLineType);
+            applicationOutput.setRequired(isRequired);
+            applicationOutput.setRequiredToCMD(requiredToCMD);
             applicationOutput.setDataMovement(dataMovement);
             applicationOutput.setDataNameLocation(dataNameLocation);
+            applicationOutput.setSearchQuery(searchQuery);
+            applicationOutput.setApplicationArgument(appArgument);
             em.merge(applicationOutput);
             em.getTransaction().commit();
             em.close();
@@ -378,12 +382,12 @@ public class ApplicationOutputResource extends AbstractResource {
         this.appInterfaceResource = appInterfaceResource;
     }
 
-    public String getValidityType() {
-        return validityType;
+    public boolean getRequired() {
+        return isRequired;
     }
 
-    public void setValidityType(String validityType) {
-        this.validityType = validityType;
+    public void setRequired(boolean required) {
+        this.isRequired = required;
     }
 
     public boolean isDataMovement() {
@@ -402,11 +406,27 @@ public class ApplicationOutputResource extends AbstractResource {
         this.dataNameLocation = dataNameLocation;
     }
 
-    public String getCommandLineType() {
-        return commandLineType;
+    public boolean getRequiredToCMD() {
+        return requiredToCMD;
     }
 
-    public void setCommandLineType(String commandLineType) {
-        this.commandLineType = commandLineType;
+    public void setRequiredToCMD(boolean requiredToCMD) {
+        this.requiredToCMD = requiredToCMD;
+    }
+
+    public String getSearchQuery() {
+        return searchQuery;
+    }
+
+    public void setSearchQuery(String searchQuery) {
+        this.searchQuery = searchQuery;
+    }
+
+    public String getAppArgument() {
+        return appArgument;
+    }
+
+    public void setAppArgument(String appArgument) {
+        this.appArgument = appArgument;
     }
 }

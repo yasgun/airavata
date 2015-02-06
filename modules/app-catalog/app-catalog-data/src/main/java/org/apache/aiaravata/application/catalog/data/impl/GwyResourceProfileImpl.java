@@ -22,7 +22,9 @@
 package org.apache.aiaravata.application.catalog.data.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.airavata.appcatalog.cpi.AppCatalogException;
 import org.airavata.appcatalog.cpi.GwyResourceProfile;
@@ -153,6 +155,21 @@ public class GwyResourceProfileImpl implements GwyResourceProfile {
     }
 
     @Override
+    public boolean removeComputeResourcePreferenceFromGateway(String gatewayId, String preferenceId) throws AppCatalogException {
+        try {
+            ComputeHostPreferenceResource resource = new ComputeHostPreferenceResource();
+            Map<String, String> ids = new HashMap<String, String>();
+            ids.put(AbstractResource.ComputeResourcePreferenceConstants.GATEWAY_ID, gatewayId);
+            ids.put(AbstractResource.ComputeResourcePreferenceConstants.RESOURCE_ID, preferenceId);
+            resource.remove(ids);
+            return true;
+        }catch (Exception e) {
+            logger.error("Error while deleting gateway profile...", e);
+            throw new AppCatalogException(e);
+        }
+    }
+
+    @Override
     public boolean isGatewayResourceProfileExists(String gatewayId) throws AppCatalogException {
         try {
             GatewayProfileResource resource = new GatewayProfileResource();
@@ -216,6 +233,27 @@ public class GwyResourceProfileImpl implements GwyResourceProfile {
                 }
             }
             return gatewayIds;
+        }catch (Exception e) {
+            logger.error("Error while retrieving gateway ids...", e);
+            throw new AppCatalogException(e);
+        }
+    }
+
+    @Override
+    public List<GatewayResourceProfile> getAllGatewayProfiles() throws AppCatalogException {
+        try {
+            List<GatewayResourceProfile> gatewayResourceProfileList = new ArrayList<GatewayResourceProfile>();
+            GatewayProfileResource profileResource = new GatewayProfileResource();
+            List<Resource> resourceList = profileResource.getAll();
+            if (resourceList != null && !resourceList.isEmpty()){
+                for (Resource resource : resourceList){
+                    GatewayProfileResource gatewayProfileResource = (GatewayProfileResource)resource;
+                    List<ComputeResourcePreference> computeResourcePreferences = getAllComputeResourcePreferences(gatewayProfileResource.getGatewayID());
+                    GatewayResourceProfile gatewayResourceProfile = AppCatalogThriftConversion.getGatewayResourceProfile(gatewayProfileResource, computeResourcePreferences);
+                    gatewayResourceProfileList.add(gatewayResourceProfile);
+                }
+            }
+            return gatewayResourceProfileList;
         }catch (Exception e) {
             logger.error("Error while retrieving gateway ids...", e);
             throw new AppCatalogException(e);

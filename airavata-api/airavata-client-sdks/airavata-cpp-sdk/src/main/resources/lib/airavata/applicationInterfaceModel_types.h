@@ -47,35 +47,8 @@ struct DataType {
 
 extern const std::map<int, const char*> _DataType_VALUES_TO_NAMES;
 
-struct ValidityType {
-  enum type {
-    REQUIRED = 0,
-    OPTIONAL = 1
-  };
-};
-
-extern const std::map<int, const char*> _ValidityType_VALUES_TO_NAMES;
-
-struct CommandLineType {
-  enum type {
-    INCLUSIVE = 0,
-    EXCLUSIVE = 1
-  };
-};
-
-extern const std::map<int, const char*> _CommandLineType_VALUES_TO_NAMES;
-
-struct InputMetadataType {
-  enum type {
-    MEMORY = 0,
-    CPU = 1
-  };
-};
-
-extern const std::map<int, const char*> _InputMetadataType_VALUES_TO_NAMES;
-
 typedef struct _InputDataObjectType__isset {
-  _InputDataObjectType__isset() : value(false), type(false), applicationArgument(false), standardInput(true), userFriendlyDescription(false), metaData(false), inputOrder(false), inputValid(false), addedToCommandLine(false), dataStaged(true) {}
+  _InputDataObjectType__isset() : value(false), type(false), applicationArgument(false), standardInput(true), userFriendlyDescription(false), metaData(false), inputOrder(false), isRequired(false), requiredToAddedToCommandLine(false), dataStaged(true) {}
   bool value;
   bool type;
   bool applicationArgument;
@@ -83,18 +56,18 @@ typedef struct _InputDataObjectType__isset {
   bool userFriendlyDescription;
   bool metaData;
   bool inputOrder;
-  bool inputValid;
-  bool addedToCommandLine;
+  bool isRequired;
+  bool requiredToAddedToCommandLine;
   bool dataStaged;
 } _InputDataObjectType__isset;
 
 class InputDataObjectType {
  public:
 
-  static const char* ascii_fingerprint; // = "95DCCA621F7BE3FA34349CC6A45329DA";
-  static const uint8_t binary_fingerprint[16]; // = {0x95,0xDC,0xCA,0x62,0x1F,0x7B,0xE3,0xFA,0x34,0x34,0x9C,0xC6,0xA4,0x53,0x29,0xDA};
+  static const char* ascii_fingerprint; // = "22DB8CAA7C1FBBFDD0CA6E19790BA799";
+  static const uint8_t binary_fingerprint[16]; // = {0x22,0xDB,0x8C,0xAA,0x7C,0x1F,0xBB,0xFD,0xD0,0xCA,0x6E,0x19,0x79,0x0B,0xA7,0x99};
 
-  InputDataObjectType() : name(), value(), type((DataType::type)0), applicationArgument(), standardInput(false), userFriendlyDescription(), metaData(), inputOrder(0), inputValid((ValidityType::type)0), addedToCommandLine((CommandLineType::type)0), dataStaged(false) {
+  InputDataObjectType() : name(), value(), type((DataType::type)0), applicationArgument(), standardInput(false), userFriendlyDescription(), metaData(), inputOrder(0), isRequired(0), requiredToAddedToCommandLine(0), dataStaged(false) {
   }
 
   virtual ~InputDataObjectType() throw() {}
@@ -107,8 +80,8 @@ class InputDataObjectType {
   std::string userFriendlyDescription;
   std::string metaData;
   int32_t inputOrder;
-  ValidityType::type inputValid;
-  CommandLineType::type addedToCommandLine;
+  bool isRequired;
+  bool requiredToAddedToCommandLine;
   bool dataStaged;
 
   _InputDataObjectType__isset __isset;
@@ -152,14 +125,14 @@ class InputDataObjectType {
     __isset.inputOrder = true;
   }
 
-  void __set_inputValid(const ValidityType::type val) {
-    inputValid = val;
-    __isset.inputValid = true;
+  void __set_isRequired(const bool val) {
+    isRequired = val;
+    __isset.isRequired = true;
   }
 
-  void __set_addedToCommandLine(const CommandLineType::type val) {
-    addedToCommandLine = val;
-    __isset.addedToCommandLine = true;
+  void __set_requiredToAddedToCommandLine(const bool val) {
+    requiredToAddedToCommandLine = val;
+    __isset.requiredToAddedToCommandLine = true;
   }
 
   void __set_dataStaged(const bool val) {
@@ -199,13 +172,13 @@ class InputDataObjectType {
       return false;
     else if (__isset.inputOrder && !(inputOrder == rhs.inputOrder))
       return false;
-    if (__isset.inputValid != rhs.__isset.inputValid)
+    if (__isset.isRequired != rhs.__isset.isRequired)
       return false;
-    else if (__isset.inputValid && !(inputValid == rhs.inputValid))
+    else if (__isset.isRequired && !(isRequired == rhs.isRequired))
       return false;
-    if (__isset.addedToCommandLine != rhs.__isset.addedToCommandLine)
+    if (__isset.requiredToAddedToCommandLine != rhs.__isset.requiredToAddedToCommandLine)
       return false;
-    else if (__isset.addedToCommandLine && !(addedToCommandLine == rhs.addedToCommandLine))
+    else if (__isset.requiredToAddedToCommandLine && !(requiredToAddedToCommandLine == rhs.requiredToAddedToCommandLine))
       return false;
     if (__isset.dataStaged != rhs.__isset.dataStaged)
       return false;
@@ -227,22 +200,24 @@ class InputDataObjectType {
 void swap(InputDataObjectType &a, InputDataObjectType &b);
 
 typedef struct _OutputDataObjectType__isset {
-  _OutputDataObjectType__isset() : value(false), type(false), validityType(false), addedToCommandLine(false), dataMovement(false), dataNameLocation(false) {}
+  _OutputDataObjectType__isset() : value(false), type(false), applicationArgument(false), isRequired(false), requiredToAddedToCommandLine(false), dataMovement(false), location(false), searchQuery(false) {}
   bool value;
   bool type;
-  bool validityType;
-  bool addedToCommandLine;
+  bool applicationArgument;
+  bool isRequired;
+  bool requiredToAddedToCommandLine;
   bool dataMovement;
-  bool dataNameLocation;
+  bool location;
+  bool searchQuery;
 } _OutputDataObjectType__isset;
 
 class OutputDataObjectType {
  public:
 
-  static const char* ascii_fingerprint; // = "C7730F2BFEF5236FD42B9C23095938DB";
-  static const uint8_t binary_fingerprint[16]; // = {0xC7,0x73,0x0F,0x2B,0xFE,0xF5,0x23,0x6F,0xD4,0x2B,0x9C,0x23,0x09,0x59,0x38,0xDB};
+  static const char* ascii_fingerprint; // = "3259D81CA906AEEBC4D76ED47386A18B";
+  static const uint8_t binary_fingerprint[16]; // = {0x32,0x59,0xD8,0x1C,0xA9,0x06,0xAE,0xEB,0xC4,0xD7,0x6E,0xD4,0x73,0x86,0xA1,0x8B};
 
-  OutputDataObjectType() : name(), value(), type((DataType::type)0), validityType((ValidityType::type)0), addedToCommandLine((CommandLineType::type)0), dataMovement(0), dataNameLocation() {
+  OutputDataObjectType() : name(), value(), type((DataType::type)0), applicationArgument(), isRequired(0), requiredToAddedToCommandLine(0), dataMovement(0), location(), searchQuery() {
   }
 
   virtual ~OutputDataObjectType() throw() {}
@@ -250,10 +225,12 @@ class OutputDataObjectType {
   std::string name;
   std::string value;
   DataType::type type;
-  ValidityType::type validityType;
-  CommandLineType::type addedToCommandLine;
+  std::string applicationArgument;
+  bool isRequired;
+  bool requiredToAddedToCommandLine;
   bool dataMovement;
-  std::string dataNameLocation;
+  std::string location;
+  std::string searchQuery;
 
   _OutputDataObjectType__isset __isset;
 
@@ -271,14 +248,19 @@ class OutputDataObjectType {
     __isset.type = true;
   }
 
-  void __set_validityType(const ValidityType::type val) {
-    validityType = val;
-    __isset.validityType = true;
+  void __set_applicationArgument(const std::string& val) {
+    applicationArgument = val;
+    __isset.applicationArgument = true;
   }
 
-  void __set_addedToCommandLine(const CommandLineType::type val) {
-    addedToCommandLine = val;
-    __isset.addedToCommandLine = true;
+  void __set_isRequired(const bool val) {
+    isRequired = val;
+    __isset.isRequired = true;
+  }
+
+  void __set_requiredToAddedToCommandLine(const bool val) {
+    requiredToAddedToCommandLine = val;
+    __isset.requiredToAddedToCommandLine = true;
   }
 
   void __set_dataMovement(const bool val) {
@@ -286,9 +268,14 @@ class OutputDataObjectType {
     __isset.dataMovement = true;
   }
 
-  void __set_dataNameLocation(const std::string& val) {
-    dataNameLocation = val;
-    __isset.dataNameLocation = true;
+  void __set_location(const std::string& val) {
+    location = val;
+    __isset.location = true;
+  }
+
+  void __set_searchQuery(const std::string& val) {
+    searchQuery = val;
+    __isset.searchQuery = true;
   }
 
   bool operator == (const OutputDataObjectType & rhs) const
@@ -303,21 +290,29 @@ class OutputDataObjectType {
       return false;
     else if (__isset.type && !(type == rhs.type))
       return false;
-    if (__isset.validityType != rhs.__isset.validityType)
+    if (__isset.applicationArgument != rhs.__isset.applicationArgument)
       return false;
-    else if (__isset.validityType && !(validityType == rhs.validityType))
+    else if (__isset.applicationArgument && !(applicationArgument == rhs.applicationArgument))
       return false;
-    if (__isset.addedToCommandLine != rhs.__isset.addedToCommandLine)
+    if (__isset.isRequired != rhs.__isset.isRequired)
       return false;
-    else if (__isset.addedToCommandLine && !(addedToCommandLine == rhs.addedToCommandLine))
+    else if (__isset.isRequired && !(isRequired == rhs.isRequired))
+      return false;
+    if (__isset.requiredToAddedToCommandLine != rhs.__isset.requiredToAddedToCommandLine)
+      return false;
+    else if (__isset.requiredToAddedToCommandLine && !(requiredToAddedToCommandLine == rhs.requiredToAddedToCommandLine))
       return false;
     if (__isset.dataMovement != rhs.__isset.dataMovement)
       return false;
     else if (__isset.dataMovement && !(dataMovement == rhs.dataMovement))
       return false;
-    if (__isset.dataNameLocation != rhs.__isset.dataNameLocation)
+    if (__isset.location != rhs.__isset.location)
       return false;
-    else if (__isset.dataNameLocation && !(dataNameLocation == rhs.dataNameLocation))
+    else if (__isset.location && !(location == rhs.location))
+      return false;
+    if (__isset.searchQuery != rhs.__isset.searchQuery)
+      return false;
+    else if (__isset.searchQuery && !(searchQuery == rhs.searchQuery))
       return false;
     return true;
   }
@@ -345,8 +340,8 @@ typedef struct _ApplicationInterfaceDescription__isset {
 class ApplicationInterfaceDescription {
  public:
 
-  static const char* ascii_fingerprint; // = "3BB1C87ED8E5FD354E5AE0409D72BE54";
-  static const uint8_t binary_fingerprint[16]; // = {0x3B,0xB1,0xC8,0x7E,0xD8,0xE5,0xFD,0x35,0x4E,0x5A,0xE0,0x40,0x9D,0x72,0xBE,0x54};
+  static const char* ascii_fingerprint; // = "C21011258B830B950ECA4A73DCB61630";
+  static const uint8_t binary_fingerprint[16]; // = {0xC2,0x10,0x11,0x25,0x8B,0x83,0x0B,0x95,0x0E,0xCA,0x4A,0x73,0xDC,0xB6,0x16,0x30};
 
   ApplicationInterfaceDescription() : applicationInterfaceId("DO_NOT_SET_AT_CLIENTS"), applicationName(), applicationDescription() {
   }

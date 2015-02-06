@@ -219,6 +219,13 @@ public class Utils {
                     logger.error("Object should be a Experiment.", new IllegalArgumentException());
                     throw new IllegalArgumentException("Object should be a Experiment.");
                 }
+            case NOTIFICATION_EMAIL:
+                if (o instanceof  Notification_Email){
+                    return createNotificationEmail((Notification_Email)o);
+                }else {
+                    logger.error("Object should be a Experiment.", new IllegalArgumentException());
+                    throw new IllegalArgumentException("Object should be a Experiment.");
+                }
             case EXPERIMENT_INPUT:
                 if (o instanceof  Experiment_Input){
                     return createExperimentInput((Experiment_Input)o);
@@ -503,9 +510,22 @@ public class Utils {
             experimentResource.setWorkflowTemplateId(o.getWorkflowTemplateId());
             experimentResource.setWorkflowTemplateVersion(o.getWorkflowTemplateVersion());
             experimentResource.setWorkflowExecutionId(o.getWorkflowExecutionId());
+            experimentResource.setEnableEmailNotifications(o.isAllowNotification());
         }
 
         return experimentResource;
+    }
+
+    private static Resource createNotificationEmail (Notification_Email o){
+        NotificationEmailResource emailResource = new NotificationEmailResource();
+        if (o != null){
+            ExperimentResource experimentResource = (ExperimentResource)createExperiment(o.getExperiment());
+            emailResource.setExperimentResource(experimentResource);
+            TaskDetailResource taskDetailResource =  (TaskDetailResource)createTaskDetail(o.getTaskDetail());
+            emailResource.setTaskDetailResource(taskDetailResource);
+            emailResource.setEmailAddress(o.getEmailAddress());
+        }
+        return emailResource;
     }
 
     private static Resource createExperimentInput (Experiment_Input o){
@@ -520,8 +540,8 @@ public class Utils {
             eInputResource.setInputOrder(o.getInputOrder());
             eInputResource.setStandardInput(o.isStandardInput());
             eInputResource.setUserFriendlyDesc(o.getUserFriendlyDesc());
-            eInputResource.setValidityType(o.getValidityType());
-            eInputResource.setCommandLineType(o.getCommandLineType());
+            eInputResource.setRequired(o.isRequired());
+            eInputResource.setRequiredToCMD(o.isRequiredToCMD());
             eInputResource.setDataStaged(o.isDataStaged());
 
             if (o.getValue() != null){
@@ -542,10 +562,12 @@ public class Utils {
                 eOutputResource.setValue(new String(o.getValue()));
             }
             eOutputResource.setDataType(o.getDataType());
-            eOutputResource.setValidityType(o.getValidityType());
-            eOutputResource.setCommandLineType(o.getCommandLineType());
+            eOutputResource.setRequired(o.isRequired());
+            eOutputResource.setRequiredToCMD(o.isRequiredToCMD());
             eOutputResource.setDataMovement(o.isDataMovement());
             eOutputResource.setDataNameLocation(o.getDataNameLocation());
+            eOutputResource.setSearchQuery(o.getSearchQuery());
+            eOutputResource.setAppArgument(o.getApplicationArgument());
         }
         return eOutputResource;
     }
@@ -575,6 +597,7 @@ public class Utils {
             taskDetailResource.setApplicationId(o.getAppId());
             taskDetailResource.setApplicationVersion(o.getAppVersion());
             taskDetailResource.setApplicationDeploymentId(o.getApplicationDeploymentId());
+            taskDetailResource.setEnableEmailNotifications(o.isAllowNotification());
         }
         return taskDetailResource;
     }
@@ -617,8 +640,8 @@ public class Utils {
             inputResource.setInputOrder(o.getInputOrder());
             inputResource.setStandardInput(o.isStandardInput());
             inputResource.setUserFriendlyDesc(o.getUserFriendlyDesc());
-            inputResource.setValidityType(o.getValidityType());
-            inputResource.setCommandLineType(o.getCommandLineType());
+            inputResource.setRequired(o.isRequired());
+            inputResource.setRequiredToCMD(o.isRequiredToCMD());
             inputResource.setDataStaged(o.isDataStaged());
             if (o.getValue() != null){
                 inputResource.setValue(new String(o.getValue()));
@@ -638,10 +661,12 @@ public class Utils {
             if (o.getValue() != null){
                 outputResource.setValue(new String(o.getValue()));
             }
-            outputResource.setValidityType(o.getValidityType());
-            outputResource.setCommandLineType(o.getCommandLineType());
+            outputResource.setRequired(o.isRequired());
+            outputResource.setRequiredToCMD(o.isAddedToCmd());
             outputResource.setDataMovement(o.isDataMovement());
             outputResource.setDataNameLocation(o.getDataNameLocation());
+            outputResource.setSearchQuery(o.getSearchQuery());
+            outputResource.setAppArgument(o.getApplicationArgument());
         }
         return outputResource;
     }
@@ -659,8 +684,8 @@ public class Utils {
             inputResource.setInputOrder(o.getInputOrder());
             inputResource.setStandardInput(o.isStandardInput());
             inputResource.setUserFriendlyDesc(o.getUserFriendlyDesc());
-            inputResource.setValidityType(o.getValidityType());
-            inputResource.setCommandLineType(o.getCommandLineType());
+            inputResource.setRequired(o.getIsRequired());
+            inputResource.setRequiredToCMD(o.getRequiredToCMD());
             inputResource.setDataStaged(o.isDataStaged());
         }
         return inputResource;
@@ -674,10 +699,12 @@ public class Utils {
             outputResource.setDataType(o.getDataType());
             outputResource.setOutputKey(o.getOutputKey());
             outputResource.setValue(o.getValue());
-            outputResource.setValidityType(o.getValidityType());
-            outputResource.setCommandLineType(o.getCommandLineType());
+            outputResource.setRequired(o.isRequired());
+            outputResource.setRequiredToCMD(o.isRequiredToCMD());
             outputResource.setDataMovement(o.isDataMovement());
             outputResource.setDataNameLocation(o.getDataNameLocation());
+            outputResource.setSearchQuery(o.getSearchQuery());
+            outputResource.setAppArgument(o.getApplicationArgument());
         }
 
         return outputResource;

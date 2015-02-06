@@ -106,7 +106,6 @@ public class GSISSHProvider extends AbstractRecoverableProvider {
             log.info(jobDescriptor.toXML());
             data.append("jobDesc=").append(jobDescriptor.toXML());
             jobDetails.setJobDescription(jobDescriptor.toXML());
-
             String jobID = cluster.submitBatchJob(jobDescriptor);
             jobExecutionContext.setJobDetails(jobDetails);
             if (jobID == null) {
@@ -273,6 +272,7 @@ public class GSISSHProvider extends AbstractRecoverableProvider {
                 try {
                     this.execute(jobExecutionContext);
                 } catch (GFacException e) {
+                    log.error("Error while  recovering provider", e);
                     throw new GFacProviderException("Error recovering provider", e);
                 }
                 return;
@@ -288,16 +288,17 @@ public class GSISSHProvider extends AbstractRecoverableProvider {
                 try {
                     this.execute(jobExecutionContext);
                 } catch (GFacException e) {
+                    log.error("Error while  recovering provider", e);
                     throw new GFacProviderException("Error recovering provider", e);
                 }
                 return;
             }
         } catch (ApplicationSettingsException e) {
-            e.printStackTrace();
+            log.error("Error while  recovering provider", e);
         } catch (KeeperException e) {
-            e.printStackTrace();
+            log.error("Error while  recovering provider", e);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            log.error("Error while  recovering provider", e);
         }
         try {
             // Now we are we have enough data to recover
@@ -318,6 +319,7 @@ public class GSISSHProvider extends AbstractRecoverableProvider {
                     jobExecutionContext.getPreferredJobSubmissionInterface().getJobSubmissionInterfaceId());
             delegateToMonitorHandlers(jobExecutionContext, sshJobSubmission, jobId);
         } catch (Exception e) {
+            log.error("Error while recover the job", e);
             throw new GFacProviderException("Error delegating already ran job to Monitoring", e);
         }
     }

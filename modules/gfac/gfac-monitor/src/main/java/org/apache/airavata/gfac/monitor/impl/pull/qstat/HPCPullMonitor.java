@@ -55,7 +55,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class HPCPullMonitor extends PullMonitor {
 
     private final static AiravataLogger logger = AiravataLoggerFactory.getLogger(HPCPullMonitor.class);
-    public static final int FAILED_COUNT = 1;
+    public static final int FAILED_COUNT = 5;
 
     // I think this should use DelayedBlocking Queue to do the monitoring*/
     private BlockingQueue<UserMonitorData> queue;
@@ -132,7 +132,7 @@ public class HPCPullMonitor extends PullMonitor {
             try {
                 resourceConnection.getCluster().disconnect();
             } catch (SSHApiException e) {
-                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                logger.error("Erro while connecting to the cluster", e);
             }
         }
     }

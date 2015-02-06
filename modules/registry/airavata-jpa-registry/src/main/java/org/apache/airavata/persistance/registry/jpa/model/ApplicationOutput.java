@@ -43,26 +43,22 @@ public class ApplicationOutput implements Serializable {
     @Column(name = "VALUE")
     private char[] value;
 
-    @Column(name = "VALIDITY_TYPE")
-    private String validityType;
-    @Column(name="COMMANDLINE_TYPE")
-    private String commandLineType;
+    @Column(name = "IS_REQUIRED")
+    private boolean isRequired;
+    @Column(name="REQUIRED_TO_COMMANDLINE")
+    private boolean addedToCmd;
     @Column(name = "DATA_MOVEMENT")
     private boolean dataMovement;
     @Column(name = "DATA_NAME_LOCATION")
     private String dataNameLocation;
+    @Column(name = "SEARCH_QUERY")
+    private String searchQuery;
+    @Column(name = "APP_ARGUMENT")
+    private String applicationArgument;
 
     @ManyToOne(cascade= CascadeType.MERGE)
     @JoinColumn(name = "TASK_ID")
     private TaskDetail task;
-
-    public String getCommandLineType() {
-        return commandLineType;
-    }
-
-    public void setCommandLineType(String commandLineType) {
-        this.commandLineType = commandLineType;
-    }
 
     public String getTaskId() {
         return taskId;
@@ -104,12 +100,20 @@ public class ApplicationOutput implements Serializable {
         this.dataType = dataType;
     }
 
-    public String getValidityType() {
-        return validityType;
+    public boolean isRequired() {
+        return isRequired;
     }
 
-    public void setValidityType(String validityType) {
-        this.validityType = validityType;
+    public void setRequired(boolean isRequired) {
+        this.isRequired = isRequired;
+    }
+
+    public boolean isAddedToCmd() {
+        return addedToCmd;
+    }
+
+    public void setAddedToCmd(boolean addedToCmd) {
+        this.addedToCmd = addedToCmd;
     }
 
     public boolean isDataMovement() {
@@ -126,5 +130,21 @@ public class ApplicationOutput implements Serializable {
 
     public void setDataNameLocation(String dataNameLocation) {
         this.dataNameLocation = dataNameLocation;
+    }
+
+    public String getSearchQuery() {
+        return searchQuery;
+    }
+
+    public void setSearchQuery(String searchQuery) {
+        this.searchQuery = searchQuery;
+    }
+
+    public String getApplicationArgument() {
+        return applicationArgument;
+    }
+
+    public void setApplicationArgument(String applicationArgument) {
+        this.applicationArgument = applicationArgument;
     }
 }

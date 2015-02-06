@@ -27,7 +27,6 @@ import org.apache.airavata.credential.store.credential.impl.certificate.Certific
 import org.apache.airavata.credential.store.store.CredentialReader;
 import org.apache.airavata.gfac.GFacException;
 import org.apache.airavata.gfac.RequestData;
-import org.apache.airavata.gfac.core.context.ApplicationContext;
 import org.apache.airavata.gfac.core.context.JobExecutionContext;
 import org.apache.airavata.gfac.core.context.MessageContext;
 import org.apache.airavata.gfac.core.utils.GFacUtils;
@@ -41,7 +40,9 @@ import org.apache.airavata.gsi.ssh.impl.GSISSHAbstractCluster;
 import org.apache.airavata.gsi.ssh.impl.PBSCluster;
 import org.apache.airavata.gsi.ssh.util.CommonUtils;
 import org.apache.airavata.model.appcatalog.appdeployment.ApplicationDeploymentDescription;
+import org.apache.airavata.model.appcatalog.appinterface.DataType;
 import org.apache.airavata.model.appcatalog.appinterface.InputDataObjectType;
+import org.apache.airavata.model.appcatalog.appinterface.OutputDataObjectType;
 import org.apache.airavata.model.appcatalog.computeresource.*;
 import org.apache.airavata.model.appcatalog.gatewayprofile.ComputeResourcePreference;
 import org.apache.airavata.model.workspace.experiment.ComputationalResourceScheduling;
@@ -49,6 +50,7 @@ import org.apache.airavata.model.workspace.experiment.TaskDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.*;
 
 
@@ -72,7 +74,7 @@ public class GFACGSISSHUtils {
                 logger.error("This is a wrong method to invoke to non ssh host types,please check your gfac-config.xml");
             } else if (jobProtocol == JobSubmissionProtocol.SSH && sshJobSubmission.getSecurityProtocol() == SecurityProtocol.GSI) {
                 String credentialStoreToken = jobExecutionContext.getCredentialStoreToken(); // this is set by the framework
-                RequestData requestData = new RequestData(ServerSettings.getDefaultUserGateway());
+                RequestData requestData = new RequestData(jobExecutionContext.getGatewayID());
                 requestData.setTokenId(credentialStoreToken);
                 PBSCluster pbsCluster = null;
                 GSISecurityContext context = null;
@@ -82,7 +84,7 @@ public class GFACGSISSHUtils {
                 if (credentialReader != null) {
                     CertificateCredential credential = null;
                     try {
-                        credential = (CertificateCredential) credentialReader.getCredential(ServerSettings.getDefaultUserGateway(), credentialStoreToken);
+                        credential = (CertificateCredential) credentialReader.getCredential(jobExecutionContext.getGatewayID(), credentialStoreToken);
                         requestData.setMyProxyUserName(credential.getCommunityUser().getUserName());
                     } catch (Exception e) {
                         logger.error(e.getLocalizedMessage());
@@ -171,6 +173,28 @@ public class GFACGSISSHUtils {
                 }
             }
         }
+        try {
+			if(ServerSettings.getSetting(ServerSettings.JOB_NOTIFICATION_ENABLE).equalsIgnoreCase("true")){
+				jobDescriptor.setMailOptions(ServerSettings.getSetting(ServerSettings.JOB_NOTIFICATION_FLAGS));
+				String emailids = ServerSettings.getSetting(ServerSettings.JOB_NOTIFICATION_EMAILIDS);
+			
+				if(jobExecutionContext.getTaskData().isSetEmailAddresses()){
+					List<String> emailList = jobExecutionContext.getTaskData().getEmailAddresses();
+					String elist = GFacUtils.listToCsv(emailList, ',');
+					if(emailids != null && !emailids.isEmpty()){
+						emailids = emailids +"," + elist;
+					}else{
+						emailids = elist;
+					}
+				}
+				if(emailids != null && !emailids.isEmpty()){
+					logger.info("Email list: "+ emailids);
+					jobDescriptor.setMailAddress(emailids);
+				}
+			}
+		} catch (ApplicationSettingsException e) {
+			 logger.error("ApplicationSettingsException : " +e.getLocalizedMessage());
+		}
         // this is common for any application descriptor
         jobDescriptor.setCallBackIp(ServerSettings.getIp());
         jobDescriptor.setCallBackPort(ServerSettings.getSetting(org.apache.airavata.common.utils.Constants.GFAC_SERVER_PORT, "8950"));
@@ -197,7 +221,6 @@ public class GFACGSISSHUtils {
 
         List<String> inputValues = new ArrayList<String>();
         MessageContext input = jobExecutionContext.getInMessageContext();
-        Map<String, Object> inputs = input.getParameters();
         // sort the inputs first and then build the command List
         Comparator<InputDataObjectType> inputOrderComparator = new Comparator<InputDataObjectType>() {
             @Override
@@ -213,14 +236,43 @@ public class GFACGSISSHUtils {
             }
         }
         for (InputDataObjectType inputDataObjectType : sortedInputSet) {
+            if (!inputDataObjectType.isRequiredToAddedToCommandLine()) {
+                continue;
+            }
             if (inputDataObjectType.getApplicationArgument() != null
                     && !inputDataObjectType.getApplicationArgument().equals("")) {
-               inputValues.add(inputDataObjectType.getApplicationArgument());
+                inputValues.add(inputDataObjectType.getApplicationArgument());
             }
 
             if (inputDataObjectType.getValue() != null
                     && !inputDataObjectType.getValue().equals("")) {
-                inputValues.add(inputDataObjectType.getValue());
+                if (inputDataObjectType.getType() == DataType.URI) {
+                    // set only the relative path
+                    String filePath = inputDataObjectType.getValue();
+                    filePath = filePath.substring(filePath.lastIndexOf(File.separatorChar) + 1, filePath.length());
+                    inputValues.add(filePath);
+                }else {
+                    inputValues.add(inputDataObjectType.getValue());
+                }
+
+            }
+        }
+
+        Map<String, Object> outputParams = jobExecutionContext.getOutMessageContext().getParameters();
+        for (Object outputParam : outputParams.values()) {
+            if (outputParam instanceof OutputDataObjectType) {
+                OutputDataObjectType output = (OutputDataObjectType) outputParam;
+                if (output.getApplicationArgument() != null
+                        && !output.getApplicationArgument().equals("")) {
+                    inputValues.add(output.getApplicationArgument());
+                }
+                if (output.getValue() != null && !output.getValue().equals("") && output.isRequiredToAddedToCommandLine()) {
+                    if (output.getType() == DataType.URI){
+                        String filePath = output.getValue();
+                        filePath = filePath.substring(filePath.lastIndexOf(File.separatorChar) + 1, filePath.length());
+                        inputValues.add(filePath);
+                    }
+                }
             }
         }
         jobDescriptor.setInputValues(inputValues);
@@ -228,7 +280,6 @@ public class GFACGSISSHUtils {
         jobDescriptor.setUserName(((GSISSHAbstractCluster) cluster).getServerInfo().getUserName());
         jobDescriptor.setShellName("/bin/bash");
         jobDescriptor.setAllEnvExport(true);
-        jobDescriptor.setMailOptions("n");
         jobDescriptor.setOwner(((PBSCluster) cluster).getServerInfo().getUserName());
 
         ComputationalResourceScheduling taskScheduling = taskData.getTaskScheduling();
@@ -261,11 +312,41 @@ public class GFACGSISSHUtils {
             if (taskScheduling.getWallTimeLimit() > 0) {
                 jobDescriptor.setMaxWallTime(String.valueOf(taskScheduling.getWallTimeLimit()));
             }
+
+            if (taskScheduling.getTotalPhysicalMemory() > 0) {
+                jobDescriptor.setUsedMemory(taskScheduling.getTotalPhysicalMemory() + "");
+            }
         } else {
             logger.error("Task scheduling cannot be null at this point..");
         }
 
+        ApplicationDeploymentDescription appDepDescription = jobExecutionContext.getApplicationContext().getApplicationDeploymentDescription();
+        List<String> moduleCmds = appDepDescription.getModuleLoadCmds();
+        if (moduleCmds != null) {
+            for (String moduleCmd : moduleCmds) {
+                jobDescriptor.addModuleLoadCommands(moduleCmd);
+            }
+        }
+        List<String> preJobCommands = appDepDescription.getPreJobCommands();
+        if (preJobCommands != null) {
+            for (String preJobCommand : preJobCommands) {
+                jobDescriptor.addPreJobCommand(parseCommand(preJobCommand, jobExecutionContext));
+            }
+        }
 
+        List<String> postJobCommands = appDepDescription.getPostJobCommands();
+        if (postJobCommands != null) {
+            for (String postJobCommand : postJobCommands) {
+                jobDescriptor.addPostJobCommand(parseCommand(postJobCommand, jobExecutionContext));
+            }
+        }
         return jobDescriptor;
+    }
+
+    private static String parseCommand(String value, JobExecutionContext jobExecutionContext) {
+        String parsedValue = value.replaceAll("\\$workingDir", jobExecutionContext.getWorkingDir());
+        parsedValue = parsedValue.replaceAll("\\$inputDir", jobExecutionContext.getInputDir());
+        parsedValue = parsedValue.replaceAll("\\$outputDir", jobExecutionContext.getOutputDir());
+        return parsedValue;
     }
 }

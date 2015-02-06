@@ -108,7 +108,6 @@ public class EventDataRepository implements TableModel, BoundedRangeModel {
     public void addEvent(EventData event) {
         // no need the check for not null because second clause is evaluated only if
         // not null
-        System.out.println("Add event triggered");
             boolean sliderMax = (this.sliderValue == this.events.size());
 
             this.events.add(event);
@@ -138,8 +137,7 @@ public class EventDataRepository implements TableModel, BoundedRangeModel {
 			try {
 				listener.monitoringPreStart();
 			} catch (Exception e) {
-				//just in case
-				e.printStackTrace();
+                logger.error(e.getMessage(), e);
 			}
 		}
 	}
@@ -149,9 +147,8 @@ public class EventDataRepository implements TableModel, BoundedRangeModel {
 			try {
 				listener.monitoringPostStart();
 			} catch (Exception e) {
-				//just in case
-				e.printStackTrace();
-			}
+                logger.error(e.getMessage(), e);
+            }
 		}
 	}
 
@@ -160,8 +157,7 @@ public class EventDataRepository implements TableModel, BoundedRangeModel {
 			try {
 				listener.monitoringPreStop();
 			} catch (Exception e) {
-				//just in case
-				e.printStackTrace();
+                logger.error(e.getMessage(), e);
 			}
 		}
 	}
@@ -171,8 +167,7 @@ public class EventDataRepository implements TableModel, BoundedRangeModel {
 			try {
 				listener.monitoringPostStop();
 			} catch (Exception e) {
-				//just in case
-				e.printStackTrace();
+                logger.error(e.getMessage(), e);
 			}
 		}
 	}

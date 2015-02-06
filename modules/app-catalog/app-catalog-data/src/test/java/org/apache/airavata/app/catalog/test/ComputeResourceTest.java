@@ -33,6 +33,8 @@ import org.apache.airavata.model.appcatalog.computeresource.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -41,6 +43,7 @@ import static org.junit.Assert.assertTrue;
 public class ComputeResourceTest {
     private static Initialize initialize;
     private static AppCatalog appcatalog;
+    private static final Logger logger = LoggerFactory.getLogger(ComputeResourceTest.class);
 
     @Before
     public void setUp() {
@@ -50,7 +53,7 @@ public class ComputeResourceTest {
             initialize.initializeDB();
             appcatalog = AppCatalogFactory.getAppCatalog();
         } catch (AppCatalogException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -143,6 +146,10 @@ public class ComputeResourceTest {
             ComputeResourceDescription host = null;
             if (computeResource.isComputeResourceExists(resourceId)){
                 host = computeResource.getComputeResource(resourceId);
+                List<BatchQueue> batchQueues = host.getBatchQueues();
+                for (BatchQueue queue : batchQueues){
+                    System.out.println("%%%%%%%%%%%%%%%% queue description :  %%%%%%%%%%%%%%%%%%% : " + queue.getQueueDescription());
+                }
                 List<String> hostAliases = host.getHostAliases();
                 if (hostAliases != null && !hostAliases.isEmpty()){
                     for (String alias : hostAliases){
@@ -215,7 +222,7 @@ public class ComputeResourceTest {
 
             assertTrue("Compute resource save successfully", host != null);
         } catch (AppCatalogException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -237,7 +244,7 @@ public class ComputeResourceTest {
             jobSubmission.setResourceJobManager(jobManager);
             return appcatalog.getComputeResource().addSSHJobSubmission(jobSubmission);
         } catch (AppCatalogException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
         return null;
     }
@@ -265,7 +272,7 @@ public class ComputeResourceTest {
             dataMovement.setSecurityProtocol(SecurityProtocol.SSH_KEYS);
             return appcatalog.getComputeResource().addScpDataMovement(dataMovement);
         }catch (AppCatalogException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
         return null;
     }
@@ -280,7 +287,7 @@ public class ComputeResourceTest {
             dataMovement.setGridFTPEndPoints(endPoints);
             return appcatalog.getComputeResource().addGridFTPDataMovement(dataMovement);
         }catch (AppCatalogException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
         return null;
     }

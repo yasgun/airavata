@@ -43,22 +43,6 @@ enum DataType{
 	STDERR
 }
 
-enum ValidityType{
-	REQUIRED,
-	OPTIONAL
-}
-
-enum CommandLineType{
-	INCLUSIVE,
-	EXCLUSIVE
-}
-
-enum InputMetadataType {
-    MEMORY,
-    CPU
-}
-
-
 /**
  * Application Inputs. The paramters describe how inputs are passed to the application.
  *
@@ -94,8 +78,8 @@ struct InputDataObjectType {
     6: optional string userFriendlyDescription,
     7: optional string metaData,
     8: optional i32 inputOrder,
-    9: optional ValidityType inputValid,
-    10: optional CommandLineType addedToCommandLine,
+    9: optional bool isRequired,
+    10: optional bool requiredToAddedToCommandLine,
     11: optional bool dataStaged = 0
 }
 
@@ -129,10 +113,12 @@ struct OutputDataObjectType {
     1: required string name,
     2: optional string value,
     3: optional DataType type,
-    4: optional ValidityType validityType,
-    5: optional CommandLineType addedToCommandLine,
-    6: optional bool dataMovement,
-    7: optional string dataNameLocation
+    4: optional string applicationArgument,
+    5: optional bool isRequired,
+    6: optional bool requiredToAddedToCommandLine,
+    7: optional bool dataMovement,
+    8: optional string location,
+    9: optional string searchQuery
 }
 
 /**

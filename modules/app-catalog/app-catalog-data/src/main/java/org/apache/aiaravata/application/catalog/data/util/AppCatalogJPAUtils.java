@@ -130,16 +130,16 @@ public class AppCatalogJPAUtils {
                     logger.error("Object should be a GSISSH Export.", new IllegalArgumentException());
                     throw new IllegalArgumentException("Object should be a GSISSH Export.");
                 }
-            case GSISSH_PREJOBCOMMAND:
-                if (o instanceof GSISSHPreJobCommand){
-                    return createGSISSHPreJObCommand((GSISSHPreJobCommand) o);
+            case PRE_JOBCOMMAND:
+                if (o instanceof PreJobCommand){
+                    return createPreJobCommand((PreJobCommand) o);
                 }else {
                     logger.error("Object should be a GSISSHPreJobCommand.", new IllegalArgumentException());
                     throw new IllegalArgumentException("Object should be a GSISSHPreJobCommand.");
                 }
-            case GSISSH_POSTJOBCOMMAND:
-                if (o instanceof GSISSHPostJobCommand){
-                    return createGSISSHPostJObCommand((GSISSHPostJobCommand) o);
+            case POST_JOBCOMMAND:
+                if (o instanceof PostJobCommand){
+                    return createPostJObCommand((PostJobCommand) o);
                 }else {
                     logger.error("Object should be a GSISSHPostJobCommand.", new IllegalArgumentException());
                     throw new IllegalArgumentException("Object should be a GSISSHPostJobCommand.");
@@ -540,22 +540,22 @@ public class AppCatalogJPAUtils {
         return resource;
     }
 
-    private static Resource createGSISSHPreJObCommand(GSISSHPreJobCommand o){
-        GSISSHPreJobCommandResource resource = new GSISSHPreJobCommandResource();
+    private static Resource createPreJobCommand(PreJobCommand o){
+        PreJobCommandResource resource = new PreJobCommandResource();
         if (o != null) {
-            resource.setSubmissionID(o.getSubmissionID());
+            resource.setAppDeploymentId(o.getDeploymentId());
             resource.setCommand(o.getCommand());
-            resource.setGsisshSubmissionResource((GSISSHSubmissionResource)createGSSISSHSubmission(o.getGsisshSubmission()));
+            resource.setAppDeploymentResource((AppDeploymentResource) createApplicationDeployment(o.getApplicationDeployment()));
         }
         return resource;
     }
 
-    private static Resource createGSISSHPostJObCommand(GSISSHPostJobCommand o){
-        GSISSHPostJobCommandResource resource = new GSISSHPostJobCommandResource();
+    private static Resource createPostJObCommand(PostJobCommand o){
+        PostJobCommandResource resource = new PostJobCommandResource();
         if (o != null){
-            resource.setSubmissionID(o.getSubmissionID());
+            resource.setAppDeploymentId(o.getDeploymentId());
             resource.setCommand(o.getCommand());
-            resource.setGsisshSubmissionResource((GSISSHSubmissionResource)createGSSISSHSubmission(o.getGsisshSubmission()));
+            resource.setAppDeploymentResource((AppDeploymentResource) createApplicationDeployment(o.getDeployment()));
         }
         return resource;
     }
@@ -764,8 +764,8 @@ public class AppCatalogJPAUtils {
             resource.setUserFriendlyDesc(o.getUserFriendlyDesc());
             resource.setStandardInput(o.isStandardInput());
             resource.setInputOrder(o.getInputOrder());
-            resource.setValidityType(o.getValidityType());
-            resource.setCommandLineType(o.getCommandLineType());
+            resource.setRequired(o.isRequired());
+            resource.setRequiredToCMD(o.isRequiredToCMD());
             resource.setDataStaged(o.isDataStaged());
             resource.setAppInterfaceResource((AppInterfaceResource)createAppInterfaceResource(o.getApplicationInterface()));
         }
@@ -786,8 +786,8 @@ public class AppCatalogJPAUtils {
             resource.setInputOrder(o.getInputOrder());
             resource.setUserFriendlyDesc(o.getUserFriendlyDesc());
             resource.setStandardInput(o.isStandardInput());
-            resource.setValidityType(o.getValidityType());
-            resource.setCommandLineType(o.getCommandLineType());
+            resource.setRequired(o.isRequired());
+            resource.setRequiredToCMD(o.isRequiredToCMD());
             resource.setDataStaged(o.isDataStaged());
             resource.setWorkflowResource((WorkflowResource)createWorkflow(o.getWorkflow()));
         }
@@ -801,10 +801,12 @@ public class AppCatalogJPAUtils {
             resource.setOutputKey(o.getOutputKey());
             resource.setOutputVal(o.getOutputVal());
             resource.setDataType(o.getDataType());
-            resource.setValidityType(o.getValidityType());
-            resource.setCommandLineType(o.getCommandLineType());
+            resource.setRequired(o.isRequired());
+            resource.setRequiredToCMD(o.isRequiredToCMD());
             resource.setDataMovement(o.isDataMovement());
             resource.setDataNameLocation(o.getDataNameLocation());
+            resource.setSearchQuery(o.getSearchQuery());
+            resource.setAppArgument(o.getApplicationArgument());
             resource.setAppInterfaceResource((AppInterfaceResource)createAppInterfaceResource(o.getApplicationInterface()));
         }
         return resource;

@@ -1,3 +1,24 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ *
+*/
+
 package org.apache.airavata.client.tools;
 
 import java.util.ArrayList;
@@ -154,13 +175,13 @@ public class RegisterUS3Application {
             appModules.add(ultrascanModuleId);
 
             InputDataObjectType input1 = RegisterSampleApplicationsUtils.createAppInput("input", null,
-                    DataType.URI, null, 1,null, null, false, "input tar file", null);
+                    DataType.URI, null, 1,true, true, false, "input tar file", null);
            
             List<InputDataObjectType> applicationInputs = new ArrayList<InputDataObjectType>();
             applicationInputs.add(input1);
 
             OutputDataObjectType output1 = RegisterSampleApplicationsUtils.createAppOutput("output",
-                    "", DataType.URI, null, null);
+                    "", DataType.URI, true, false);
 
 //            OutputDataObjectType output2 = RegisterSampleApplicationsUtils.createAppOutput("stdout",
 //                    "", DataType.URI);
@@ -186,17 +207,17 @@ public class RegisterUS3Application {
 
 			// Register Stampede
 			String ultascanStamplede = airavataClient.registerApplicationDeployment(RegisterSampleApplicationsUtils.createApplicationDeployment(ultrascanModuleId,
-					stampedeResourceId, "/home1/01623/us3/bin/us_mpi_analysis", ApplicationParallelismType.MPI, "ultrascan application", null));
+					stampedeResourceId, "/home1/01623/us3/bin/us_mpi_analysis", ApplicationParallelismType.MPI, "ultrascan application", null, null, null));
 			System.out.println("Ultrascan on stampede deployment Id " + ultascanStamplede);
 			
 			String ultascanTrestles = airavataClient.registerApplicationDeployment(RegisterSampleApplicationsUtils.createApplicationDeployment(ultrascanModuleId,
-					trestlesResourceId, "/home/us3/trestles/bin/us_mpi_analysis", ApplicationParallelismType.MPI, "ultrascan application", null));
+					trestlesResourceId, "/home/us3/trestles/bin/us_mpi_analysis", ApplicationParallelismType.MPI, "ultrascan application", null, null, null));
 			System.out.println("Ultrascan on trestles deployment Id " + ultascanTrestles);
 			String ultascanLonestar = airavataClient.registerApplicationDeployment(RegisterSampleApplicationsUtils.createApplicationDeployment(ultrascanModuleId,
-					lonestarResourceId, "/home1/01623/us3/bin/us_mpi_analysis", ApplicationParallelismType.MPI, "ultrascan application", null));
+					lonestarResourceId, "/home1/01623/us3/bin/us_mpi_analysis", ApplicationParallelismType.MPI, "ultrascan application", null, null ,null));
 			System.out.println("Ultrascan on lonestar deployment Id " + ultascanLonestar);
 			String ultascanAlamo = airavataClient.registerApplicationDeployment(RegisterSampleApplicationsUtils.createApplicationDeployment(ultrascanModuleId,
-					alamoResourceId, "/home/us3/bin/us_mpi_analysis.sh", ApplicationParallelismType.MPI, "ultrascan application", null));
+					alamoResourceId, "/home/us3/bin/us_mpi_analysis.sh", ApplicationParallelismType.MPI, "ultrascan application", null, null ,null));
 			System.out.println("Ultrascan on alamo deployment Id " + ultascanAlamo);
 		} catch (Exception e) {
 			e.printStackTrace();

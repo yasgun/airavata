@@ -31,6 +31,11 @@
     </xsl:when>
     </xsl:choose>
     <xsl:choose>
+    <xsl:when test="ns:mailAddress">
+#PBS -M <xsl:value-of select="ns:mailAddress"/>
+    </xsl:when>
+    </xsl:choose>
+    <xsl:choose>
 <xsl:when test="ns:acountString">
 #PBS -A <xsl:value-of select="ns:acountString"/>
     </xsl:when>
@@ -51,20 +56,34 @@
     </xsl:when>
     </xsl:choose>
     <xsl:choose>
+        <xsl:when test="ns:usedMem">
+            #PBS -l mem=<xsl:value-of select="ns:usedMem"/>
+        </xsl:when>
+    </xsl:choose>
+    <xsl:choose>
     <xsl:when test="(ns:nodes) and (ns:processesPerNode)">
 #PBS -l nodes=<xsl:value-of select="ns:nodes"/>:ppn=<xsl:value-of select="ns:processesPerNode"/>
 <xsl:text>&#xa;</xsl:text>
     </xsl:when>
     </xsl:choose>
+    <xsl:text>&#xa;</xsl:text>
 <xsl:for-each select="ns:exports/ns:name">
 <xsl:value-of select="."/>=<xsl:value-of select="./@value"/><xsl:text>&#xa;</xsl:text>
 export<xsl:text>   </xsl:text><xsl:value-of select="."/>
 <xsl:text>&#xa;</xsl:text>
 </xsl:for-each>
-<xsl:for-each select="ns:preJobCommands/ns:command">
-      <xsl:value-of select="."/><xsl:text>   </xsl:text>
+    <xsl:text>&#xa;</xsl:text>
+<xsl:for-each select="ns:moduleLoadCommands/ns:command">
+    <xsl:text>&#xa;</xsl:text>
+    <xsl:value-of select="."/><xsl:text>   </xsl:text>
     </xsl:for-each>
+    <xsl:text>&#xa;</xsl:text>
 cd <xsl:text>   </xsl:text><xsl:value-of select="ns:workingDirectory"/><xsl:text>&#xa;</xsl:text>
+    <xsl:for-each select="ns:preJobCommands/ns:command">
+        <xsl:value-of select="."/><xsl:text>   </xsl:text>
+        <xsl:text>&#xa;</xsl:text>
+    </xsl:for-each>
+    <xsl:text>&#xa;</xsl:text>
     <xsl:choose><xsl:when test="ns:jobSubmitterCommand != ''">
 <xsl:value-of select="ns:jobSubmitterCommand"/><xsl:text>   </xsl:text>
 <xsl:value-of select="ns:cpuCount"/><xsl:text>   </xsl:text>
@@ -72,9 +91,11 @@ cd <xsl:text>   </xsl:text><xsl:value-of select="ns:workingDirectory"/><xsl:text
 <xsl:for-each select="ns:inputs/ns:input">
       <xsl:value-of select="."/><xsl:text>   </xsl:text>
     </xsl:for-each>
+    <xsl:text>&#xa;</xsl:text>
 <xsl:for-each select="ns:postJobCommands/ns:command">
       <xsl:value-of select="."/><xsl:text>   </xsl:text>
 </xsl:for-each>
+    <xsl:text>&#xa;</xsl:text>
 ~/rabbitmq-java-client-bin-3.3.5/runjava.sh com.rabbitmq.examples.SimpleProducer amqp://<xsl:value-of select="ns:callBackIp"/><xsl:text> </xsl:text><xsl:value-of select="ns:userName"/>,<xsl:value-of select="ns:jobName"/><xsl:text> </xsl:text><xsl:value-of select="$quote"/><xsl:value-of select="$quote"/><xsl:text> </xsl:text><xsl:value-of select="ns:callBackPort"/>
 </xsl:template>
 

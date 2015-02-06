@@ -55,6 +55,8 @@ public class RegisterSampleData {
     private String multiplyModuleId;
     private String subtractModuleId;
     private String sampleScriptDir;
+    private String monteXModuleId;
+    private String gaussianModuleId;
 
     public static void main(String[] args) throws AiravataClientConnectException, TException {
         RegisterSampleData registerSampleData = new RegisterSampleData();
@@ -118,6 +120,85 @@ public class RegisterSampleData {
         registerSubtractApplicationInterface();
         registerMultiplyApplicationInterface();
         registerEchoInterface();
+        registerTinkerMonteInterface();
+        registerGaussianInterface();
+    }
+
+    private void registerGaussianInterface() {
+        try {
+            System.out.println("#### Registering Gaussian Application Interface ####");
+
+            List<String> appModules = new ArrayList<String>();
+            appModules.add(gaussianModuleId);
+
+            InputDataObjectType input1 = RegisterSampleApplicationsUtils.createAppInput("MainInputFile", null,
+                    DataType.URI, null, 1,true,true, false, "Gaussian main input file", null);
+
+            List<InputDataObjectType> applicationInputs = new ArrayList<InputDataObjectType>();
+            applicationInputs.add(input1);
+
+            OutputDataObjectType output1 = RegisterSampleApplicationsUtils.createAppOutput("gaussian.out",
+                    "", DataType.URI, true,true);
+
+            List<OutputDataObjectType> applicationOutputs = new ArrayList<OutputDataObjectType>();
+            applicationOutputs.add(output1);
+
+            String addApplicationInterfaceId = airavataClient.registerApplicationInterface(
+                    RegisterSampleApplicationsUtils.createApplicationInterfaceDescription("Gaussian", "Gaussian application",
+                            appModules, applicationInputs, applicationOutputs));
+            System.out.println("Gaussian Application Interface Id " + addApplicationInterfaceId);
+
+        } catch (TException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void registerTinkerMonteInterface() {
+        try {
+            System.out.println("#### Registering Tinker Monte Application Interface ####");
+
+            List<String> appModules = new ArrayList<String>();
+            appModules.add(monteXModuleId);
+
+            InputDataObjectType input1 = RegisterSampleApplicationsUtils.createAppInput("xyzf", "O16.xyz",
+                    DataType.STRING, null, 1, true,true, false, "Tinker monte input_1", null);
+            InputDataObjectType input2 = RegisterSampleApplicationsUtils.createAppInput("keyf", "O16.key",
+                    DataType.STRING, "-k", 2, true,true, false, "Tinker monte input_2", null);
+            InputDataObjectType input3 = RegisterSampleApplicationsUtils.createAppInput("stps", "20000",
+                    DataType.STRING, null, 3, true,true, false, "Tinker monte input_3", null);
+            InputDataObjectType input4 = RegisterSampleApplicationsUtils.createAppInput("Ctc", "C",
+                    DataType.STRING, null, 4, true,true, false, "Tinker monte input_4", null);
+            InputDataObjectType input5 = RegisterSampleApplicationsUtils.createAppInput("stpsZ", "3.0",
+                    DataType.STRING, null, 5, true,true, false, "Tinker monte input_5", null);
+            InputDataObjectType input6 = RegisterSampleApplicationsUtils.createAppInput("temp", "298",
+                    DataType.STRING, null, 6, true,true, false, "Tinker monte input_6", null);
+            InputDataObjectType input7 = RegisterSampleApplicationsUtils.createAppInput("Rconv", "0.01",
+                    DataType.STRING, null, 7, true,true, false, "Tinker monte input_7", null);
+
+
+            List<InputDataObjectType> applicationInputs = new ArrayList<InputDataObjectType>();
+            applicationInputs.add(input1);
+            applicationInputs.add(input2);
+            applicationInputs.add(input3);
+            applicationInputs.add(input4);
+            applicationInputs.add(input5);
+            applicationInputs.add(input6);
+            applicationInputs.add(input7);
+
+            OutputDataObjectType output1 = RegisterSampleApplicationsUtils.createAppOutput("Diskoutputfile_with_dir",
+                    "", DataType.URI, true,false);
+
+            List<OutputDataObjectType> applicationOutputs = new ArrayList<OutputDataObjectType>();
+            applicationOutputs.add(output1);
+
+            String addApplicationInterfaceId = airavataClient.registerApplicationInterface(
+                    RegisterSampleApplicationsUtils.createApplicationInterfaceDescription("Tinker_Monte", "Monte application",
+                            appModules, applicationInputs, applicationOutputs));
+            System.out.println("Monte Application Interface Id " + addApplicationInterfaceId);
+
+        } catch (TException e) {
+            e.printStackTrace();
+        }
     }
 
     private void registerApplicationDeployments() throws TException {
@@ -125,26 +206,44 @@ public class RegisterSampleData {
         //Register Echo
         String echoAppDeployId = airavataClient.registerApplicationDeployment(
                 RegisterSampleApplicationsUtils.createApplicationDeployment(echoModuleId, localhostId,
-                        sampleScriptDir + "/echo.sh", ApplicationParallelismType.SERIAL, "Echo application description", null));
+                        sampleScriptDir + "/echo.sh", ApplicationParallelismType.SERIAL, "Echo application description",
+                        null, null, null));
         System.out.println("Successfully registered Echo application on localhost, application Id = " + echoAppDeployId);
 
         //Register Add application
         String addAppDeployId = airavataClient.registerApplicationDeployment(
                 RegisterSampleApplicationsUtils.createApplicationDeployment(addModuleId, localhostId,
-                        sampleScriptDir + "/add.sh", ApplicationParallelismType.SERIAL, "Add application description", null));
+                        sampleScriptDir + "/add.sh", ApplicationParallelismType.SERIAL, "Add application description",
+                        null, null, null));
         System.out.println("Successfully registered Add application on localhost, application Id = " + addAppDeployId);
 
         //Register Multiply application
         String multiplyAppDeployId = airavataClient.registerApplicationDeployment(
                 RegisterSampleApplicationsUtils.createApplicationDeployment(multiplyModuleId, localhostId,
-                        sampleScriptDir + "/multiply.sh", ApplicationParallelismType.SERIAL, "Multiply application description", null));
+                        sampleScriptDir + "/multiply.sh", ApplicationParallelismType.SERIAL, "Multiply application description",
+                        null, null, null));
         System.out.println("Successfully registered Multiply application on localhost, application Id = " + multiplyAppDeployId);
 
         //Register Subtract application
         String subtractAppDeployId = airavataClient.registerApplicationDeployment(
                 RegisterSampleApplicationsUtils.createApplicationDeployment(subtractModuleId, localhostId,
-                        sampleScriptDir + "/subtract.sh", ApplicationParallelismType.SERIAL, "Subtract application description ", null));
+                        sampleScriptDir + "/subtract.sh", ApplicationParallelismType.SERIAL, "Subtract application description ",
+                        null, null, null));
         System.out.println("Successfully registered Subtract application on localhost, application Id = " + subtractAppDeployId);
+
+        //Register Tinker monte application
+        String tinkerMonteAppDeployId = airavataClient.registerApplicationDeployment(
+                RegisterSampleApplicationsUtils.createApplicationDeployment(monteXModuleId, localhostId,
+                        sampleScriptDir + "/monte.x", ApplicationParallelismType.SERIAL, "Grid chem tinker monte application description ",
+                        null, null, null));
+        System.out.println("Successfully registered tinker monte application on localhost, application Id = " + tinkerMonteAppDeployId);
+
+        //Register Tinker monte application
+        String gaussianAppDeployId = airavataClient.registerApplicationDeployment(
+                RegisterSampleApplicationsUtils.createApplicationDeployment(gaussianModuleId, localhostId,
+                        sampleScriptDir + "/gaussian.sh", ApplicationParallelismType.SERIAL, "Grid chem Gaussian application description ",
+                        null, null, null));
+        System.out.println("Successfully registered Gaussian application on localhost, application Id = " + gaussianAppDeployId);
     }
 
     private void registerApplicationModules() throws TException {
@@ -164,6 +263,15 @@ public class RegisterSampleData {
         subtractModuleId = airavataClient.registerApplicationModule(
                 RegisterSampleApplicationsUtils.createApplicationModule(
                         "Subtract", "1.0", "Subtract application description"));
+        //Register Monte
+        monteXModuleId = airavataClient.registerApplicationModule(
+                RegisterSampleApplicationsUtils.createApplicationModule(
+                        "Tinker Monte", "1.0", "Grid chem tinker monte application description"));
+
+        // Register gaussian application
+        gaussianModuleId = airavataClient.registerApplicationModule(
+                RegisterSampleApplicationsUtils.createApplicationModule(
+                        "Gaussian", "1.0", "Grid Chem Gaussian application description"));
 
     }
 
@@ -176,13 +284,13 @@ public class RegisterSampleData {
             appModules.add(echoModuleId);
 
             InputDataObjectType input1 = RegisterSampleApplicationsUtils.createAppInput("Input_to_Echo", "Hello World",
-                    DataType.STRING, null, 1, null, null, false, "A test string to Echo", null);
+                    DataType.STRING, null, 1, true,true, false, "A test string to Echo", null);
 
             List<InputDataObjectType> applicationInputs = new ArrayList<InputDataObjectType>();
             applicationInputs.add(input1);
 
             OutputDataObjectType output1 = RegisterSampleApplicationsUtils.createAppOutput("Echoed_Output",
-                    "", DataType.STRING, null, null);
+                    "", DataType.STRING, true, false);
 
             List<OutputDataObjectType> applicationOutputs = new ArrayList<OutputDataObjectType>();
             applicationOutputs.add(output1);
@@ -205,16 +313,16 @@ public class RegisterSampleData {
             appModules.add(addModuleId);
 
             InputDataObjectType input1 = RegisterSampleApplicationsUtils.createAppInput("x", "2",
-                    DataType.STRING, null, 1, null, null, false, "Add operation input_1", null);
+                    DataType.STRING, null, 1, true,true, false, "Add operation input_1", null);
             InputDataObjectType input2 = RegisterSampleApplicationsUtils.createAppInput("y", "3",
-                    DataType.STRING, null, 2, null, null, false, "Add operation input_2", null);
+                    DataType.STRING, null, 2, true,true, false, "Add operation input_2", null);
 
             List<InputDataObjectType> applicationInputs = new ArrayList<InputDataObjectType>();
             applicationInputs.add(input1);
             applicationInputs.add(input2);
 
             OutputDataObjectType output1 = RegisterSampleApplicationsUtils.createAppOutput("Result",
-                    "0", DataType.STRING, null, null);
+                    "0", DataType.STRING, true,false);
 
             List<OutputDataObjectType> applicationOutputs = new ArrayList<OutputDataObjectType>();
             applicationOutputs.add(output1);
@@ -237,16 +345,16 @@ public class RegisterSampleData {
             appModules.add(multiplyModuleId);
 
             InputDataObjectType input1 = RegisterSampleApplicationsUtils.createAppInput("x", "4",
-                    DataType.STRING, null, 1,null, null, false, "Multiply operation input_1", null);
+                    DataType.STRING, null, 1,true,true, false, "Multiply operation input_1", null);
             InputDataObjectType input2 = RegisterSampleApplicationsUtils.createAppInput("y", "5",
-                    DataType.STRING, null, 2, null, null, false, "Multiply operation input_2", null);
+                    DataType.STRING, null, 2, true,true, false, "Multiply operation input_2", null);
 
             List<InputDataObjectType> applicationInputs = new ArrayList<InputDataObjectType>();
             applicationInputs.add(input1);
             applicationInputs.add(input2);
 
             OutputDataObjectType output1 = RegisterSampleApplicationsUtils.createAppOutput("Result",
-                    "0", DataType.STRING,null, null);
+                    "0", DataType.STRING,true,false);
 
             List<OutputDataObjectType> applicationOutputs = new ArrayList<OutputDataObjectType>();
             applicationOutputs.add(output1);
@@ -269,16 +377,16 @@ public class RegisterSampleData {
             appModules.add(subtractModuleId);
 
             InputDataObjectType input1 = RegisterSampleApplicationsUtils.createAppInput("x", "6",
-                    DataType.STRING, null, 1,null, null, false, "Subtract operation input_1", null);
+                    DataType.STRING, null, 1,true,true, false, "Subtract operation input_1", null);
             InputDataObjectType input2 = RegisterSampleApplicationsUtils.createAppInput("y", "7",
-                    DataType.STRING, null, 2,null, null, false, "Subtract operation input_2", null);
+                    DataType.STRING, null, 2,true,true, false, "Subtract operation input_2", null);
 
             List<InputDataObjectType> applicationInputs = new ArrayList<InputDataObjectType>();
             applicationInputs.add(input1);
             applicationInputs.add(input2);
 
             OutputDataObjectType output1 = RegisterSampleApplicationsUtils.createAppOutput("Result",
-                    "0", DataType.STRING, null, null);
+                    "0", DataType.STRING, true,false);
 
             List<OutputDataObjectType> applicationOutputs = new ArrayList<OutputDataObjectType>();
             applicationOutputs.add(output1);
