@@ -39,9 +39,9 @@ public class OutputNodeImpl implements OutputNode {
     private PortModel portModel;
     private String value;
     private DataType dataType;
+    private String description, name, id;
 
-    public OutputNodeImpl(NodeModel nodeModel) {
-        this.nodeModel = nodeModel;
+    public OutputNodeImpl() {
     }
 
     @Override
@@ -55,8 +55,18 @@ public class OutputNodeImpl implements OutputNode {
     }
 
     @Override
+    public void setId(String nodeId) {
+        this.id = nodeId;
+    }
+
+    @Override
     public String getId() {
-        return getNodeModel().getNodeId();
+        return id;
+    }
+
+    @Override
+    public void setName(String nodeName) {
+        this.name = nodeName;
     }
 
     @Override
@@ -71,12 +81,17 @@ public class OutputNodeImpl implements OutputNode {
 
     @Override
     public String getNodeId() {
-        return getNode().getId();
+        return id;
+    }
+
+    @Override
+    public void setNodeId(String nodeId) {
+       this.id = nodeId;
     }
 
     @Override
     public String getName() {
-        return getNodeModel().getName();
+        return name;
     }
 
     @Override
@@ -114,6 +129,16 @@ public class OutputNodeImpl implements OutputNode {
     public boolean isReady() {
         return !(getInputObject() == null || getInputObject().getValue() == null
                 || getInputObject().getValue().equals(""));
+    }
+
+    @Override
+    public void setDescription(String description) {
+            this.description = description;
+    }
+
+    @Override
+    public String getDescription() {
+        return description;
     }
 
     @Override

@@ -38,9 +38,10 @@ public class OutPortImpl implements OutPort {
     private WorkflowNode node;
     private PortModel portModel;
     private DataType dataType;
+    private String description, name, id, nodeId;
 
-    public OutPortImpl(PortModel portModel) {
-        this.portModel = portModel;
+    public OutPortImpl() {
+
     }
 
     @Override
@@ -61,6 +62,16 @@ public class OutPortImpl implements OutPort {
     @Override
     public void addEdge(Edge edge) {
         this.outEdges.add(edge);
+    }
+
+    @Override
+    public void setName(String portName) {
+        this.name = portName;
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 
     @Override
@@ -91,7 +102,12 @@ public class OutPortImpl implements OutPort {
 
     @Override
     public String getId() {
-        return getPortModel().getPortId();
+        return id;
+    }
+
+    @Override
+    public void setId(String id) {
+        this.id = id;
     }
 
     @Override
@@ -106,6 +122,21 @@ public class OutPortImpl implements OutPort {
 
     @Override
     public String getNodeId() {
-        return getNode().getId();
+        return nodeId;
+    }
+
+    @Override
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    @Override
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    @Override
+    public String getDescription() {
+        return description;
     }
 }

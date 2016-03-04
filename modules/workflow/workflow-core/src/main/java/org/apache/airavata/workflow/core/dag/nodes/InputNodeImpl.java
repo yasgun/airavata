@@ -40,16 +40,16 @@ public class InputNodeImpl implements InputNode {
     private List<Edge> edges = new ArrayList<>();
     private String value;
     private DataType dataType;
+    private String description, name, id;
 
 
-    public InputNodeImpl(NodeModel nodeModel) {
-        this.nodeModel = nodeModel;
-        setPortModel(convert(nodeModel));
+    public InputNodeImpl() {
     }
 
     @Override
     public void setNodeModel(NodeModel nodeModel) {
         this.nodeModel = nodeModel;
+        setPortModel(convert(nodeModel));
     }
 
     @Override
@@ -58,13 +58,23 @@ public class InputNodeImpl implements InputNode {
     }
 
     @Override
+    public void setId(String nodeId) {
+        this.id = nodeId;
+    }
+
+    @Override
     public String getId() {
-        return getNodeModel().getNodeId();
+        return id;
+    }
+
+    @Override
+    public void setName(String nodeName) {
+        this.name = nodeName;
     }
 
     @Override
     public String getName() {
-        return getNodeModel().getName();
+        return name;
     }
 
     @Override
@@ -101,6 +111,16 @@ public class InputNodeImpl implements InputNode {
     public boolean isReady() {
         return (inputDataObjectType.getValue() != null && !inputDataObjectType.getValue().equals(""))
                 || !inputDataObjectType.isIsRequired();
+    }
+
+    @Override
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    @Override
+    public String getDescription() {
+        return description;
     }
 
     @Override
@@ -159,6 +179,11 @@ public class InputNodeImpl implements InputNode {
     @Override
     public String getNodeId() {
         return getNode().getId();
+    }
+
+    @Override
+    public void setNodeId(String nodeId) {
+
     }
 
     @Override

@@ -63,9 +63,9 @@ public class JsonWorkflowParserTest {
         Assert.assertEquals("default_id", workflowInfo.getId());
         Assert.assertEquals("default description", workflowInfo.getDescription());
         Assert.assertEquals("version", workflowInfo.getVersion());
-        testApplications(jwp);
-        testWorkflowInputs(jwp);
-        testWorkflowOutputs(jwp);
+//        testApplications(jwp);
+//        testWorkflowInputs(jwp);
+//        testWorkflowOutputs(jwp);
 
     }
 

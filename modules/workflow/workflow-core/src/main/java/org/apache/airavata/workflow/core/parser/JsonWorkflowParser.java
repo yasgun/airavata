@@ -24,11 +24,8 @@ package org.apache.airavata.workflow.core.parser;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
-import org.apache.airavata.model.ComponentState;
 import org.apache.airavata.model.ComponentStatus;
 import org.apache.airavata.model.EdgeModel;
-import org.apache.airavata.model.NodeModel;
-import org.apache.airavata.model.PortModel;
 import org.apache.airavata.model.application.io.DataType;
 import org.apache.airavata.workflow.core.WorkflowInfo;
 import org.apache.airavata.workflow.core.dag.edge.DirectedEdge;
@@ -220,7 +217,7 @@ public class JsonWorkflowParser implements WorkflowParser {
         if (links != null) {
             for (Link link : links) {
                 EdgeModel edgeModel = new EdgeModel(link.getId());
-                Edge edge = new DirectedEdge(edgeModel);
+                Edge edge = new DirectedEdge();
 //                edge.setFromPort(outPort);
                 outPort.addEdge(edge);
                 inPortMap.put(link.getTo().getNodeId() + "," + link.getTo().getPortId(), edge);
@@ -288,7 +285,6 @@ public class JsonWorkflowParser implements WorkflowParser {
     private void readWorkflowInputs(JsonReader jsonReader) throws ParserException, IOException {
         JsonToken peek = jsonReader.peek();
         InputNode inputNode;
-        NodeModel nodeModel;
         ComponentStatus status;
         String name;
         if (peek == JsonToken.NULL) {
@@ -297,22 +293,17 @@ public class JsonWorkflowParser implements WorkflowParser {
             jsonReader.beginArray();
             while (jsonReader.hasNext()) {
                 jsonReader.beginObject();
-                nodeModel = new NodeModel();
-                status = new ComponentStatus();
-                status.setState(ComponentState.CREATED);
-                status.setReason("Created");
-                nodeModel.setStatus(status);
-                inputNode = new InputNodeImpl(nodeModel);
+                inputNode = new InputNodeImpl();
                 while (jsonReader.hasNext()) {
                     name = jsonReader.nextName();
                     if (name.equals(NAME)) {
-                        nodeModel.setName(jsonReader.nextString());
+                        inputNode.setName(jsonReader.nextString());
                     } else if (name.equals(ID)) {
-                        nodeModel.setNodeId(jsonReader.nextString());
+                        inputNode.setId(jsonReader.nextString());
                     } else if (name.equals(DATATYPE)) {
                         inputNode.setDataType(DataType.valueOf(jsonReader.nextString()));
                     } else if (name.equals(DESCRIPTION)) {
-                        nodeModel.setDescription(jsonReader.nextString());
+                        inputNode.setDescription(jsonReader.nextString());
                     } else if (name.equals(POSITION)) {
                         readPosition(jsonReader);
                     } else if (name.equals(NODE_ID)) {
@@ -337,8 +328,6 @@ public class JsonWorkflowParser implements WorkflowParser {
     private void readWorkflowOutputs(JsonReader jsonReader) throws IOException, ParserException {
         JsonToken peek = jsonReader.peek();
         OutputNode outputNode;
-        NodeModel nodeModel;
-        ComponentStatus status;
         String name;
         if (peek == JsonToken.NULL) {
             throw new ParserException("Error! workflow outputs can't be null");
@@ -346,22 +335,17 @@ public class JsonWorkflowParser implements WorkflowParser {
             jsonReader.beginArray();
             while (jsonReader.hasNext()) {
                 jsonReader.beginObject();
-                nodeModel = new NodeModel();
-                status = new ComponentStatus();
-                status.setState(ComponentState.CREATED);
-                status.setReason("Created");
-                nodeModel.setStatus(status);
-                outputNode = new OutputNodeImpl(nodeModel);
+                outputNode = new OutputNodeImpl();
                 while (jsonReader.hasNext()) {
                     name = jsonReader.nextName();
                     if (name.equals(NAME)) {
-                        nodeModel.setName(jsonReader.nextString());
+                        outputNode.setName(jsonReader.nextString());
                     } else if (name.equals(ID)) {
-                        nodeModel.setNodeId(jsonReader.nextString());
+                        outputNode.setId(jsonReader.nextString());
                     } else if (name.equals(DATATYPE)) {
                         jsonReader.skipValue();
                     } else if (name.equals(DESCRIPTION)) {
-                        nodeModel.setDescription(jsonReader.nextString());
+                        outputNode.setDescription(jsonReader.nextString());
                     } else if (name.equals(POSITION)) {
                         readPosition(jsonReader);
                     } else if (name.equals(NODE_ID)) {
@@ -443,21 +427,16 @@ public class JsonWorkflowParser implements WorkflowParser {
 
     private ApplicationNode readApplication(JsonReader jsonReader) throws IOException, ParserException {
         jsonReader.beginObject();
-        NodeModel nodeModel = new NodeModel();
-        ComponentStatus status = new ComponentStatus();
-        status.setState(ComponentState.CREATED);
-        status.setReason("Created");
-        nodeModel.setStatus(status);
-        ApplicationNode applicationNode = new ApplicationNodeImpl(nodeModel);
+        ApplicationNode applicationNode = new ApplicationNodeImpl();
         String name;
         while (jsonReader.hasNext()) {
             name = jsonReader.nextName();
             if (name.equals(APPLICATION_ID)) {
-                nodeModel.setApplicationId(jsonReader.nextString());
+                applicationNode.setApplicationId(jsonReader.nextString());
             } else if (name.equals(NAME)) {
-                nodeModel.setName(jsonReader.nextString());
+                applicationNode.setName(jsonReader.nextString());
             } else if (name.equals(DESCRIPTION)) {
-                nodeModel.setDescription(jsonReader.nextString());
+                applicationNode.setDescription(jsonReader.nextString());
             } else if (name.equals(APPTYPE)) {
                 jsonReader.skipValue();
             } else if (name.equals(INPUTS)) {
@@ -467,7 +446,7 @@ public class JsonWorkflowParser implements WorkflowParser {
             } else if (name.equals(POSITION)) {
                 readPosition(jsonReader);
             } else if (name.equals(NODE_ID)) {
-                nodeModel.setNodeId(jsonReader.nextString());
+                applicationNode.setId(jsonReader.nextString());
             } else if (name.equals(PARALLEL_EXECUTION)) {
                 jsonReader.skipValue();
             } else if (name.equals(PROPERTIES)) {
@@ -481,7 +460,6 @@ public class JsonWorkflowParser implements WorkflowParser {
     private List<InPort> readApplicationInputs(JsonReader jsonReader) throws IOException, ParserException {
         List<InPort> inPorts = new ArrayList<>();
         JsonToken peek = jsonReader.peek();
-        PortModel portModel;
         InPort inPort;
         String name;
         if (peek == JsonToken.NULL) {
@@ -489,21 +467,20 @@ public class JsonWorkflowParser implements WorkflowParser {
         } else if (peek == JsonToken.BEGIN_ARRAY) {
             jsonReader.beginArray();
             while (jsonReader.hasNext()) {
-                portModel = new PortModel();
-                inPort = new InputPortIml(portModel);
+                inPort = new InputPortIml();
                 jsonReader.beginObject();
                 while (jsonReader.hasNext()) {
                     name = jsonReader.nextName();
                     if (name.equals(NAME)) {
-                        portModel.setName(jsonReader.nextString());
+                        inPort.setName(jsonReader.nextString());
                     } else if (name.equals(ID)) {
-                        portModel.setPortId(jsonReader.nextString());
+                        inPort.setId(jsonReader.nextString());
                     } else if (name.equals(DATATYPE)) {
                         jsonReader.skipValue();
                     } else if (name.equals(DEFAULT_VALUE)) {
                         inPort.setDefaultValue(jsonReader.nextString());
                     } else if (name.equals(DESCRIPTION)) {
-                        portModel.setDescription(jsonReader.nextString());
+                        inPort.setDescription(jsonReader.nextString());
                     } else {
                         jsonReader.skipValue();
                     }
@@ -522,7 +499,6 @@ public class JsonWorkflowParser implements WorkflowParser {
 
     private List<OutPort> readApplicationOutputs(JsonReader jsonReader) throws IOException, ParserException {
         List<OutPort> outPorts = new ArrayList<>();
-        PortModel portModel;
         OutPort outPort;
         String name;
         JsonToken peek = jsonReader.peek();
@@ -531,21 +507,20 @@ public class JsonWorkflowParser implements WorkflowParser {
         } else if (peek == JsonToken.BEGIN_ARRAY) {
             jsonReader.beginArray();
             while (jsonReader.hasNext()) {
-                portModel = new PortModel();
-                outPort = new OutPortImpl(portModel);
+                outPort = new OutPortImpl();
                 jsonReader.beginObject();
                 while (jsonReader.hasNext()) {
                     name = jsonReader.nextName();
                     if (name.equals(NAME)) {
-                        portModel.setName(jsonReader.nextString());
+                        outPort.setName(jsonReader.nextString());
                     } else if (name.equals(ID)) {
-                        portModel.setPortId(jsonReader.nextString());
+                        outPort.setId(jsonReader.nextString());
                     } else if (name.equals(DATATYPE)) {
                         jsonReader.skipValue();
                     } else if (name.equals(DEFAULT_VALUE)) {
                         jsonReader.skipValue(); // can output has default values?
                     } else if (name.equals(DESCRIPTION)) {
-                        portModel.setDescription(jsonReader.nextString());
+                        outPort.setDescription(jsonReader.nextString());
                     } else {
                         jsonReader.skipValue();
                     }

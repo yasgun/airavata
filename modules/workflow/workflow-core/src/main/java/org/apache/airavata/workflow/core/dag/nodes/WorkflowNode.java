@@ -31,7 +31,11 @@ public interface WorkflowNode {
 
     public NodeModel getNodeModel();
 
+    public void setId(String nodeId);
+
     public String getId();
+
+    public void setName(String nodeName);
 
     public String getName();
 
@@ -44,5 +48,9 @@ public interface WorkflowNode {
     public void setStatus(ComponentStatus newStatus);
 
     public boolean isReady();
+
+    public void setDescription(String description);
+
+    public String getDescription();
 
 }

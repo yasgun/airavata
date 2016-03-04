@@ -33,9 +33,9 @@ public class InputPortIml implements InPort {
     private WorkflowNode node;
     private PortModel portModel;
     private DataType dataType;
+    private String name, id, nodeId, description, defaultValue;
 
-    public InputPortIml(PortModel portModel) {
-        this.portModel = portModel;
+    public InputPortIml() {
     }
 
     @Override
@@ -62,11 +62,21 @@ public class InputPortIml implements InPort {
 
     @Override
     public String getDefaultValue() {
-        return getPortModel().getValue();
+        return defaultValue;
     }
 
     public void setDefaultValue(String defaultValue) {
-        getPortModel().setValue(defaultValue);
+        this.defaultValue = defaultValue;
+    }
+
+    @Override
+    public void setName(String portName) {
+        this.name = portName;
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 
     @Override
@@ -97,7 +107,12 @@ public class InputPortIml implements InPort {
 
     @Override
     public String getId() {
-        return getPortModel().getPortId();
+        return id;
+    }
+
+    @Override
+    public void setId(String id) {
+        this.id = id;
     }
 
     @Override
@@ -112,7 +127,22 @@ public class InputPortIml implements InPort {
 
     @Override
     public String getNodeId() {
-        return getNode().getId();
+        return nodeId;
+    }
+
+    @Override
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    @Override
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    @Override
+    public String getDescription() {
+        return description;
     }
 
 }

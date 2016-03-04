@@ -31,14 +31,19 @@ public class DirectedEdge implements Edge {
     private InPort toPort;
     private OutPort fromPort;
     private EdgeModel edgeModel;
+    private String id;
 
-    public DirectedEdge(EdgeModel edgeModel) {
-        this.edgeModel = edgeModel;
+    public DirectedEdge() {
+    }
+
+    @Override
+    public void setId(String edgeId) {
+        this.id = edgeId;
     }
 
     @Override
     public String getId() {
-        return getEdgeModel().getEdgeId();
+        return id;
     }
 
     @Override

@@ -36,9 +36,12 @@ public class ApplicationNodeImpl implements ApplicationNode {
     private NodeModel nodeModel;
     private List<InPort> inPorts = new ArrayList<>();
     private List<OutPort> outPorts = new ArrayList<>();
+    private String name;
+    private String id;
+    private String description;
 
-    public ApplicationNodeImpl(NodeModel nodeModel) {
-        this.nodeModel = nodeModel;
+    public ApplicationNodeImpl() {
+
     }
 
     @Override
@@ -52,13 +55,23 @@ public class ApplicationNodeImpl implements ApplicationNode {
     }
 
     @Override
+    public void setId(String nodeId) {
+        this.id = nodeId;
+    }
+
+    @Override
     public String getId() {
-        return nodeModel.getNodeId();
+        return id;
+    }
+
+    @Override
+    public void setName(String nodeName) {
+        this.name = nodeName;
     }
 
     @Override
     public String getName() {
-        return getNodeModel().getName();
+        return name;
     }
 
     @Override
@@ -92,13 +105,33 @@ public class ApplicationNodeImpl implements ApplicationNode {
     }
 
     @Override
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    @Override
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
     public String getApplicationId() {
-        return getNodeModel().getApplicationId();
+        return id;
+    }
+
+    @Override
+    public void setApplicationId(String applicationId) {
+        this.id = applicationId;
     }
 
     @Override
     public String getApplicationName() {
-        return null;
+        return name;
+    }
+
+    @Override
+    public void setApplicationName(String applicationName) {
+        this.name = applicationName;
     }
 
     @Override
