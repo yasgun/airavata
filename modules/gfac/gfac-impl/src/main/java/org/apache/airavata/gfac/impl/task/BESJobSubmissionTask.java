@@ -151,8 +151,7 @@ public class BESJobSubmissionTask implements JobSubmissionTask {
             jobDetails.setProcessId(taskContext.getProcessId());
             FactoryClient factory = new FactoryClient(eprt, secProperties);
 
-            log.info(String.format("Activity Submitting to %s ... \n",
-                    factoryUrl));
+            log.info(String.format("Activity Submitting to %s ... \n", factoryUrl));
             CreateActivityResponseDocument response = factory.createActivity(cad);
             log.info(String.format("Activity Submitted to %s \n", factoryUrl));
 
@@ -220,8 +219,8 @@ public class BESJobSubmissionTask implements JobSubmissionTask {
                 JobState applicationJobStatus = JobState.COMPLETE;
                 jobDetails.setJobStatuses(Arrays.asList(new JobStatus(applicationJobStatus)));
                 GFacUtils.saveJobStatus(processContext, jobDetails);
-                log.info("Job Id: {}, exit code: {}, exit status: {}", jobDetails.getJobId(),
-                        activityStatus.getExitCode(), ActivityStateEnumeration.FINISHED.toString());
+                log.info(String.format("Job Id: %s, exit code: %s, exit status: %s", jobDetails.getJobId(),
+                        activityStatus.getExitCode(), ActivityStateEnumeration.FINISHED.toString()));
 
 //                if (activityStatus.getExitCode() == 0) {
 //                } else {
@@ -266,7 +265,7 @@ public class BESJobSubmissionTask implements JobSubmissionTask {
                         fileName = localFilePath.substring(localFilePath.lastIndexOf("/") + 1);
                         URI destinationURI = TaskUtils.getDestinationURI(taskContext, hostName, inputPath, fileName);
                         remoteFilePath = destinationURI.getPath();
-                        log.info("SCP local file :{} -> from remote :{}", localFilePath, remoteFilePath);
+                        log.info(String.format("SCP local file :%s -> from remote :%s", localFilePath, remoteFilePath));
                         SSHUtils.scpTo(localFilePath, remoteFilePath, sshSession);
                         output.setValue(destinationURI.toString());
                         break;
@@ -313,7 +312,7 @@ public class BESJobSubmissionTask implements JobSubmissionTask {
                     remoteFilePath = remoteFileURI.getPath();
                     fileName = remoteFilePath.substring(remoteFilePath.lastIndexOf("/") + 1);
                     localFilePath = pc.getInputDir() + File.separator + fileName;
-                    log.info("SCP remote file :{} -> to local :{}", remoteFilePath, localFilePath);
+                    log.info(String.format("SCP remote file :%s -> to local :%s", remoteFilePath, localFilePath));
                     SSHUtils.scpFrom(remoteFilePath, localFilePath, sshSession);
                     input.setValue("file:/" + localFilePath);
                 }

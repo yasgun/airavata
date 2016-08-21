@@ -91,8 +91,7 @@ public abstract class AbstractThriftDeserializer<E extends TFieldIdEnum, T exten
             // Validate that the instance contains all required fields.
             validate(instance);
         } catch (final TException e) {
-            log.error(String.format("Unable to deserialize JSON '%s' to type '%s'.",
-                    jp.getValueAsString(), instance.getClass().getName(), e));
+            log.error(String.format("Unable to deserialize JSON %s to type %s.", jp.getValueAsString(), instance.getClass().getName()), e);
             ctxt.mappingException(e.getMessage());
         }
 

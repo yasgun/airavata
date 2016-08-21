@@ -91,7 +91,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
         properties = new Properties();
         properties.put("mail.store.protocol", storeProtocol);
         timer = new Timer("CancelJobHandler", true);
-        long period = 1000*60*5; // five minute delay between successive task executions.
+        long period = 1000 * 60 * 5; // five minute delay between successive task executions.
         timer.schedule(new CancelTimerTask(), 0 , period);
     }
 
@@ -117,7 +117,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 	}
 	@Override
 	public void monitor(String jobId, TaskContext taskContext) {
-		log.info("[EJM]: Added monitor Id : " + jobId + " to email based monitor map");
+		log.info(String.format("[EJM]: Added monitor Id : %s to email based monitor map", jobId));
 		jobMonitorMap.put(jobId, taskContext);
         taskContext.getParentProcessContext().setPauseTaskExecution(true);
 	}
@@ -203,7 +203,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 					    continue;
 				    } else {
                         quite = false;
-					    log.info("[EJM]: " + jobMonitorMap.size() + " job/s in job monitor map");
+					    log.info(String.format("[EJM]: %d job/s in job monitor map", jobMonitorMap.size()));
 				    }
 				    if (!store.isConnected()) {
 					    store.connect();
@@ -267,13 +267,13 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
                 if (jobStatusResult.getJobId() != null) {
                     taskContext = jobMonitorMap.get(jobStatusResult.getJobId());
                 } else {
-                    log.info("Returned null for job id, message subject--> {}" , message.getSubject());
+                    log.info(String.format("Returned null for job id, message subject--> %s" , message.getSubject()));
                 }
                 if (taskContext == null) {
                     if (jobStatusResult.getJobName() != null) {
                         taskContext = jobMonitorMap.get(jobStatusResult.getJobName());
                     } else {
-                        log.info("Returned null for job name, message subject --> {}" , message.getSubject());
+                        log.info(String.format("Returned null for job name, message subject --> %s" , message.getSubject()));
                     }
                 }
                 if (taskContext != null) {
@@ -378,9 +378,9 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 			    log.info("[EJM]: Publishing status changes to amqp. " + jobDetails);
 			    GFacUtils.saveJobStatus(parentProcessContext, jobModel);
 		    } catch (GFacException e) {
-			    log.error("expId: {}, processId: {}, taskId: {}, jobId: {} :- Error while save and publishing Job " +
-                        "status {}", taskContext.getExperimentId(), taskContext.getProcessId(), jobModel
-                        .getTaskId(), jobModel.getJobId(), jobStatus.getJobState());
+			    log.error(String.format("expId: %s, processId: %s, taskId: %s, jobId: %s :- Error while save and publishing Job " +
+                        "status %s", taskContext.getExperimentId(), taskContext.getProcessId(), jobModel
+                        .getTaskId(), jobModel.getJobId(), jobStatus.getJobState()));
 		    }
 	    }
 

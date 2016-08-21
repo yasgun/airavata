@@ -64,9 +64,9 @@ public class TaskContext {
 	}
 
 	public void setTaskStatus(TaskStatus taskStatus) {
-		log.info("expId: {}, processId: {}, taskId: {}, type: {}:- Task status changed {} -> {}", parentProcessContext
+		log.info(String.format("expId: %s, processId: %s, taskId: %s, type: %s : Task status changed %s -> %s", parentProcessContext
 				.getExperimentId(), parentProcessContext.getProcessId(), getTaskId(), getTaskType().name(),
-				getTaskState().name(), taskStatus .getState().name());
+				getTaskState().name(), taskStatus .getState().name()));
 		List<TaskStatus> taskStatuses = new ArrayList<>();
 		taskStatuses.add(taskStatus);
 		taskModel.setTaskStatuses(taskStatuses);
