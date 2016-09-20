@@ -23,6 +23,7 @@ package org.apache.airavata.server;
 import ch.qos.logback.classic.LoggerContext;
 import org.apache.airavata.api.Airavata;
 import org.apache.airavata.common.exception.AiravataException;
+import kamon.Kamon;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
 import org.apache.airavata.common.logging.kafka.KafkaAppender;
 import org.apache.airavata.common.utils.*;
@@ -44,6 +45,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class ServerMain {
+
 	private static List<IServer> servers;
 	private static final String SERVERS_KEY="servers";
     private final static Logger logger = LoggerFactory.getLogger(ServerMain.class);
@@ -160,6 +162,7 @@ public class ServerMain {
 //	}
 	
 	public static void main(String args[]) throws ParseException, IOException, AiravataException {
+		Kamon.start();
 		ServerSettings.mergeSettingsCommandLineArgs(args);
 		ServerSettings.setServerRoles(ApplicationSettings.getSetting(SERVERS_KEY, "all").split(","));
 

@@ -98,6 +98,10 @@ the License. -->
             <artifactId>airavata-server-configuration</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.kamon</groupId>
+            <artifactId>kamon-core_2.11</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
