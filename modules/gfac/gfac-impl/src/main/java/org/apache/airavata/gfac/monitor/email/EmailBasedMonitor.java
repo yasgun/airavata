@@ -20,6 +20,9 @@
 */
 package org.apache.airavata.gfac.monitor.email;
 
+import kamon.Kamon;
+import kamon.metric.instrument.Counter;
+import kamon.metric.instrument.Histogram;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.utils.AiravataUtils;
 import org.apache.airavata.common.utils.ServerSettings;
@@ -71,12 +74,15 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 	private Message[] flushUnseenMessages;
     private Map<String, Boolean> canceledJobs = new ConcurrentHashMap<>();
     private Timer timer;
-
+    private Histogram monitorQueueSize = Kamon.metrics().histogram(String.format("%s.monitor-queue-size", getClass().getCanonicalName()));
+    private Histogram cancelledJobs = Kamon.metrics().histogram(String.format("%s.cancelled-jobs", getClass().getCanonicalName()));
+    private Counter completedJobCount = Kamon.metrics().counter(String.format("%s.completed-jobs", getClass().getCanonicalName()));
+    private Counter failedJobCount = Kamon.metrics().counter(String.format("%s.failed-jobs", getClass().getCanonicalName()));
 
     public EmailBasedMonitor(Map<ResourceJobManagerType, ResourceConfig> resourceConfigs) throws AiravataException {
 		init();
 		populateAddressAndParserMap(resourceConfigs);
-	}
+    }
 
 	private void init() throws AiravataException {
         host = ServerSettings.getEmailBasedMonitorHost();
@@ -119,13 +125,15 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 	public void monitor(String jobId, TaskContext taskContext) {
 		log.info("[EJM]: Added monitor Id : {} to email based monitor map", jobId);
 		jobMonitorMap.put(jobId, taskContext);
+        monitorQueueSize.record(jobMonitorMap.size());
         taskContext.getParentProcessContext().setPauseTaskExecution(true);
 	}
 
 	@Override
 	public void stopMonitor(String jobId, boolean runOutflow) {
 		TaskContext taskContext = jobMonitorMap.remove(jobId);
-		if (taskContext != null && runOutflow) {
+        monitorQueueSize.record(jobMonitorMap.size());
+        if (taskContext != null && runOutflow) {
 			try {
                 ProcessContext pc = taskContext.getParentProcessContext();
                 if (taskContext.isCancel()) {
@@ -157,6 +165,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
     @Override
     public void canceledJob(String jobId) {
         canceledJobs.put(jobId, Boolean.FALSE);
+        cancelledJobs.record(canceledJobs.size());
     }
 
     private JobStatusResult parse(Message message) throws MessagingException, AiravataException {
@@ -330,6 +339,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 
     private void process(JobStatusResult jobStatusResult, TaskContext taskContext){
         canceledJobs.remove(jobStatusResult.getJobId());
+        cancelledJobs.record(canceledJobs.size());
         JobState resultState = jobStatusResult.getState();
         // TODO : update job state on process context
         boolean runOutflowTasks = false;
@@ -340,6 +350,8 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
         // TODO - Handle all other valid JobStates
         if (resultState == JobState.COMPLETE) {
             jobMonitorMap.remove(jobStatusResult.getJobId());
+            monitorQueueSize.record(jobMonitorMap.size());
+            completedJobCount.increment();
 	        jobStatus.setJobState(JobState.COMPLETE);
 	        jobStatus.setReason("Complete email received");
             jobStatus.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());
@@ -359,6 +371,8 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
             log.info("[EJM]: Job Active email received, " + jobDetails);
         }else if (resultState == JobState.FAILED) {
             jobMonitorMap.remove(jobStatusResult.getJobId());
+            monitorQueueSize.record(jobMonitorMap.size());
+            failedJobCount.increment();
             runOutflowTasks = true;
 	        jobStatus.setJobState(JobState.FAILED);
 	        jobStatus.setReason("Failed email received");
@@ -366,6 +380,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
             log.info("[EJM]: Job failed email received , removed job from job monitoring. " + jobDetails);
         }else if (resultState == JobState.CANCELED) {
             jobMonitorMap.remove(jobStatusResult.getJobId());
+            monitorQueueSize.record(jobMonitorMap.size());
             jobStatus.setJobState(JobState.CANCELED);
 	        jobStatus.setReason("Canceled email received");
             jobStatus.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());

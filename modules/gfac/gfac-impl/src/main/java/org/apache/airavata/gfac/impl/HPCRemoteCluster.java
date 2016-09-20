@@ -25,6 +25,8 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UserInfo;
+import kamon.Kamon;
+import kamon.metric.instrument.Counter;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.gfac.core.JobManagerConfiguration;
 import org.apache.airavata.gfac.core.SSHApiException;
@@ -51,6 +53,14 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 	private final SSHKeyAuthentication authentication;
 	private final JSch jSch;
 	private Session session;
+	private Counter submittedJobCount = Kamon.metrics().counter(String.format("%s.submitted-jobs", getClass().getCanonicalName()));
+	private Counter nonZeroExitCodeJobCount = Kamon.metrics().counter(String.format("%s.nonzero-exit-jobs", getClass().getCanonicalName()));
+	private Counter emptyJobIdCount = Kamon.metrics().counter(String.format("%s.empty-jobid-jobs", getClass().getCanonicalName()));
+	private Counter copyToFailCount = Kamon.metrics().counter(String.format("%s.copyTo-fail", getClass().getCanonicalName()));
+	private Counter copyFromFailCount = Kamon.metrics().counter(String.format("%s.copyFrom-fail", getClass().getCanonicalName()));
+	private Counter mkDirFailCount = Kamon.metrics().counter(String.format("%s.mkDir-fail", getClass().getCanonicalName()));
+	private Counter listFailCount = Kamon.metrics().counter(String.format("%s.list-fail", getClass().getCanonicalName()));
+
 
 	public HPCRemoteCluster(ServerInfo serverInfo, JobManagerConfiguration jobManagerConfiguration, AuthenticationInfo
 			authenticationInfo) throws AiravataException {
@@ -90,6 +100,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 		submitCommand.setRawCommand("cd " + workingDirectory + "; " + submitCommand.getRawCommand());
 		StandardOutReader reader = new StandardOutReader();
 		executeCommand(submitCommand, reader);
+		submittedJobCount.increment();
 //		throwExceptionOnError(reader, submitCommand);
 		jsoutput.setJobId(outputParser.parseJobSubmission(reader.getStdOutputString()));
 		if (jsoutput.getJobId() == null) {
@@ -97,6 +108,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 				jsoutput.setJobSubmissionFailed(true);
 				jsoutput.setFailureReason("stdout : " + reader.getStdOutputString() +
 						"\n stderr : " + reader.getStdErrorString());
+				emptyJobIdCount.increment();
 			}
 		}
 		jsoutput.setExitCode(reader.getExitCode());
@@ -104,6 +116,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 			jsoutput.setJobSubmissionFailed(true);
 			jsoutput.setFailureReason("stdout : " + reader.getStdOutputString() +
 					"\n stderr : " + reader.getStdErrorString());
+			nonZeroExitCodeJobCount.increment();
 		}
 		jsoutput.setStdOut(reader.getStdOutputString());
 		jsoutput.setStdErr(reader.getStdErrorString());
@@ -120,6 +133,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 				SSHUtils.scpTo(localFile, remoteFile, session);
 				retry = 0;
 			} catch (Exception e) {
+				copyToFailCount.increment();
 				retry--;
 				try {
 					session = Factory.getSSHSession(authenticationInfo, serverInfo);
@@ -147,6 +161,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 				SSHUtils.scpFrom(remoteFile, localFile, session);
 				retry=0;
 			} catch (Exception e) {
+				copyFromFailCount.increment();
 				retry--;
 				try {
 					session = Factory.getSSHSession(authenticationInfo, serverInfo);
@@ -205,6 +220,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 					SSHUtils.makeDirectory(directoryPath, session);
 					break;  // Exit while loop
 				} catch (JSchException e) {
+					mkDirFailCount.increment();
 					if (retryCount == MAX_RETRY_COUNT) {
 						log.error("Retry count " + MAX_RETRY_COUNT + " exceeded for creating directory: "
 								+ serverInfo.getHost() + ":" + directoryPath, e);
@@ -263,6 +279,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 			log.info("Creating directory: " + serverInfo.getHost() + ":" + directoryPath);
 			return SSHUtils.listDirectory(directoryPath, session);
 		} catch (JSchException | AiravataException | IOException e) {
+			listFailCount.increment();
 			throw new SSHApiException("Failed to list directory " + serverInfo.getHost() + ":" + directoryPath, e);
 		}
 	}
@@ -302,7 +319,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 			// noting to do
 		}else if ((stdErrorString.contains(command.trim()) && !stdErrorString.contains("Warning")) || stdErrorString
 				.contains("error")) {
-			log.error("Command {} , Standard Error output {}", command, stdErrorString);
+			log.error(String.format("Command %s , Standard Error output %s", command, stdErrorString));
 			throw new SSHApiException("Error running command " + command + "  on remote cluster. StandardError: " +
 					stdErrorString);
 		}
@@ -322,7 +339,7 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 					channelExec.setInputStream(null);
 					channelExec.setErrStream(commandOutput.getStandardError());
 					channelExec.connect();
-					log.info("Executing command {}", commandInfo.getCommand());
+					log.info(String.format("Executing command %s", commandInfo.getCommand()));
 					commandOutput.onOutput(channelExec);
 					break; // exit from while loop
 				} catch (JSchException e) {

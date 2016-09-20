@@ -567,6 +567,16 @@
             <artifactId>airavata-client-samples</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.kamon</groupId>
+            <artifactId>kamon-core_2.11</artifactId>
+            <version>${kamon.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kamon</groupId>
+            <artifactId>kamon-datadog_2.11</artifactId>
+            <version>${kamon.version}</version>
+        </dependency>
     </dependencies>
 
 
