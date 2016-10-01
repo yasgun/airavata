@@ -21,6 +21,8 @@
 
 package org.apache.airavata.api.server.handler;
 
+import kamon.Kamon;
+import kamon.metric.instrument.Counter;
 import org.apache.airavata.api.Airavata;
 import org.apache.airavata.api.airavata_apiConstants;
 import org.apache.airavata.api.server.security.interceptor.SecurityCheck;
@@ -91,6 +93,9 @@ public class AiravataServerHandler implements Airavata.Iface {
     private Publisher statusPublisher;
     private Publisher experimentPublisher;
     private CredentialStoreService.Client csClient;
+    private Counter experimentPublishCount = Kamon.metrics().counter(String.format("%s.experiment.publish-count", getClass().getCanonicalName()));
+    private Counter experimentLaunchPublishCount = Kamon.metrics().counter(String.format("%s.experiment_launch.publish-count", getClass().getCanonicalName()));
+    private Counter experimentCancelPublishCount = Kamon.metrics().counter(String.format("%s.experiment_cancel.publish-count", getClass().getCanonicalName()));
 
     public AiravataServerHandler() {
         try {
@@ -3645,6 +3650,8 @@ public class AiravataServerHandler implements Airavata.Iface {
         MessageContext messageContext = new MessageContext(event, MessageType.EXPERIMENT, "LAUNCH.EXP-" + UUID.randomUUID().toString(), gatewayId);
         messageContext.setUpdatedTime(AiravataUtils.getCurrentTimestamp());
         experimentPublisher.publish(messageContext);
+        experimentPublishCount.increment();
+        experimentLaunchPublishCount.increment();
     }
 
     private void submitCancelExperiment(String gatewayId, String experimentId) throws AiravataException {
@@ -3652,6 +3659,8 @@ public class AiravataServerHandler implements Airavata.Iface {
         MessageContext messageContext = new MessageContext(event, MessageType.EXPERIMENT_CANCEL, "CANCEL.EXP-" + UUID.randomUUID().toString(), gatewayId);
         messageContext.setUpdatedTime(AiravataUtils.getCurrentTimestamp());
         experimentPublisher.publish(messageContext);
+        experimentPublishCount.increment();
+        experimentCancelPublishCount.increment();
     }
 
     private CredentialStoreService.Client getCredentialStoreServiceClient() throws TException, ApplicationSettingsException {

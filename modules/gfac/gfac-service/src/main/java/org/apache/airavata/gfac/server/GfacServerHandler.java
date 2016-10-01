@@ -20,6 +20,8 @@
 */
 package org.apache.airavata.gfac.server;
 
+import kamon.Kamon;
+import kamon.metric.instrument.Counter;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.exception.AiravataStartupException;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
@@ -85,6 +87,7 @@ public class GfacServerHandler implements GfacService.Iface {
     private BlockingQueue<TaskSubmitEvent> taskSubmitEvents;
     private static List<AbstractActivityListener> activityListeners = new ArrayList<AbstractActivityListener>();
     private ExecutorService executorService;
+    private Counter consumedCount = Kamon.metrics().counter(String.format("%s.consumed-count", getClass().getCanonicalName()));
 
     public GfacServerHandler() throws AiravataStartupException {
         try {
@@ -188,6 +191,7 @@ public class GfacServerHandler implements GfacService.Iface {
 
         public void onMessage(MessageContext messageContext) {
             MDC.put(MDCConstants.GATEWAY_ID, messageContext.getGatewayId());
+            consumedCount.increment();
             log.info(" Message Received with message id {} and with message type: {}" + messageContext.getMessageId(), messageContext.getType());
             if (messageContext.getType().equals(MessageType.LAUNCHPROCESS)) {
 	            ProcessStatus status = new ProcessStatus();

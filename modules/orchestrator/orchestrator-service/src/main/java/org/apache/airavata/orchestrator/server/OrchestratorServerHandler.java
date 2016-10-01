@@ -21,6 +21,8 @@
 
 package org.apache.airavata.orchestrator.server;
 
+import kamon.Kamon;
+import kamon.metric.instrument.Counter;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
 import org.apache.airavata.common.logging.MDCConstants;
@@ -85,6 +87,13 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 	private final Subscriber statusSubscribe;
 	private final Subscriber experimentSubscriber;
 	private CuratorFramework curatorClient;
+    private Counter publishCount = Kamon.metrics().counter(String.format("%s.publish-count", getClass().getCanonicalName()));
+    private Counter publishFail = Kamon.metrics().counter(String.format("%s.publish-fail-count", getClass().getCanonicalName()));
+    private Counter processConsumeCount = Kamon.metrics().counter(String.format("%s.process.consume-count", getClass().getCanonicalName()));
+    private Counter experimentConsumeCount = Kamon.metrics().counter(String.format("%s.experiment.consume-count", getClass().getCanonicalName()));
+	private Counter experimentLaunchConsumeCount = Kamon.metrics().counter(String.format("%s.experiment_launch.consume-count", getClass().getCanonicalName()));
+	private Counter experimentCancelConsumeCount = Kamon.metrics().counter(String.format("%s.experiment_cancel.consume-count", getClass().getCanonicalName()));
+	private Counter unsupportedMessageCount = Kamon.metrics().counter(String.format("%s.unsupported-count", getClass().getCanonicalName()));
 
     /**
 	 * Query orchestrator server to fetch the CPI version
@@ -457,7 +466,11 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
                 List<String> processIds = experimentCatalog.getIds(ExperimentCatalogModelType.PROCESS,
 						AbstractExpCatResource.ProcessConstants.EXPERIMENT_ID, experimentId);
                 for (String processId : processIds) {
-                    launchProcess(processId, airavataCredStoreToken, gatewayId);
+                    if (launchProcess(processId, airavataCredStoreToken, gatewayId)) {
+                        publishCount.increment();
+                    } else {
+                        publishFail.increment();
+                    }
                 }
 //				ExperimentStatus status = new ExperimentStatus(ExperimentState.LAUNCHED);
 //				status.setReason("submitted all processes");
@@ -492,6 +505,7 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 		@Override
 		public void onMessage(MessageContext message) {
 			if (message.getType().equals(MessageType.PROCESS)) {
+                processConsumeCount.increment();
 				try {
 					ProcessStatusChangeEvent processStatusChangeEvent = new ProcessStatusChangeEvent();
 					TBase event = message.getEvent();
@@ -583,7 +597,7 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 							"Error" + " while prcessing process status change event");
 				}
 			} else {
-				System.out.println("Message Recieved with message id " + message.getMessageId() + " and with message " +
+				log.info("Message Recieved with message id " + message.getMessageId() + " and with message " +
 						"type " + message.getType().name());
 			}
 		}
@@ -595,14 +609,18 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 		@Override
 		public void onMessage(MessageContext messageContext) {
 			MDC.put(MDCConstants.GATEWAY_ID, messageContext.getGatewayId());
+            experimentConsumeCount.increment();
 			switch (messageContext.getType()) {
 				case EXPERIMENT:
+					experimentLaunchConsumeCount.increment();
 					launchExperiment(messageContext);
 					break;
 				case EXPERIMENT_CANCEL:
+					experimentCancelConsumeCount.increment();
                     cancelExperiment(messageContext);
 					break;
 				default:
+					unsupportedMessageCount.increment();
 					experimentSubscriber.sendAck(messageContext.getDeliveryTag());
 					log.error("Orchestrator got un-support message type : " + messageContext.getType());
 					break;
