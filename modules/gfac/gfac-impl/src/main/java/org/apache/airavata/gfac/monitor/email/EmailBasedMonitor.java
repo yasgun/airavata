@@ -75,10 +75,12 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 	private Message[] flushUnseenMessages;
     private Map<String, Boolean> canceledJobs = new ConcurrentHashMap<>();
     private Timer timer;
-    private Histogram monitorQueueSize = Kamon.metrics().histogram(String.format("%s.monitor-queue-size", getClass().getName()));
-    private Histogram cancelledJobs = Kamon.metrics().histogram(String.format("%s.cancelled-jobs", getClass().getName()));
+    private MinMaxCounter monitorQueueSize = Kamon.metrics().minMaxCounter(String.format("%s.monitor-queue-size", getClass().getName()));
+    private MinMaxCounter cancelledJobs = Kamon.metrics().minMaxCounter(String.format("%s.cancelled-jobs", getClass().getName()));
     private MinMaxCounter completedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.completed-jobs", getClass().getName()));
     private MinMaxCounter failedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.failed-jobs", getClass().getName()));
+    private Histogram receivedEmailCount = Kamon.metrics().histogram(String.format("%s.received-emails", getClass().getName()));
+
     private ExecutorService cachedThreadPool;
 
     public EmailBasedMonitor(Map<ResourceJobManagerType, ResourceConfig> resourceConfigs) throws AiravataException {
@@ -128,14 +130,14 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 	public void monitor(String jobId, TaskContext taskContext) {
 		log.info("[EJM]: Added monitor Id : {} to email based monitor map", jobId);
 		jobMonitorMap.put(jobId, taskContext);
-        monitorQueueSize.record(jobMonitorMap.size());
+        monitorQueueSize.increment();
         taskContext.getParentProcessContext().setPauseTaskExecution(true);
 	}
 
 	@Override
 	public void stopMonitor(String jobId, boolean runOutflow) {
 		TaskContext taskContext = jobMonitorMap.remove(jobId);
-        monitorQueueSize.record(jobMonitorMap.size());
+        monitorQueueSize.decrement();
         GFacThreadPoolExecutor.record();
         if (taskContext != null && runOutflow) {
 			try {
@@ -170,7 +172,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
     @Override
     public void canceledJob(String jobId) {
         canceledJobs.put(jobId, Boolean.FALSE);
-        cancelledJobs.record(canceledJobs.size());
+        cancelledJobs.increment();
     }
 
     private JobStatusResult parse(Message message) throws MessagingException, AiravataException {
@@ -218,7 +220,6 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 					    continue;
 				    } else {
                         quite = false;
-					    log.info("[EJM]: {} job/s in job monitor map", jobMonitorMap.size());
 				    }
 				    if (!store.isConnected()) {
 					    store.connect();
@@ -244,7 +245,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 					    if (searchMessages == null || searchMessages.length == 0) {
 						    log.info("[EJM]: No new email messages");
 					    } else {
-						    log.info("[EJM]: " + searchMessages.length + " new email/s received");
+                            receivedEmailCount.record(searchMessages.length);
 					    }
 					    processMessages(searchMessages);
 					    emailFolder.close(false);
@@ -346,7 +347,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
     private void process(JobStatusResult jobStatusResult, TaskContext taskContext){
         GFacThreadPoolExecutor.record();
         canceledJobs.remove(jobStatusResult.getJobId());
-        cancelledJobs.record(canceledJobs.size());
+        cancelledJobs.decrement();
         JobState resultState = jobStatusResult.getState();
         // TODO : update job state on process context
         boolean runOutflowTasks = false;
@@ -357,7 +358,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
         // TODO - Handle all other valid JobStates
         if (resultState == JobState.COMPLETE) {
             jobMonitorMap.remove(jobStatusResult.getJobId());
-            monitorQueueSize.record(jobMonitorMap.size());
+            monitorQueueSize.decrement();
             completedJobCount.increment();
 	        jobStatus.setJobState(JobState.COMPLETE);
 	        jobStatus.setReason("Complete email received");
@@ -378,7 +379,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
             log.info("[EJM]: Job Active email received, " + jobDetails);
         }else if (resultState == JobState.FAILED) {
             jobMonitorMap.remove(jobStatusResult.getJobId());
-            monitorQueueSize.record(jobMonitorMap.size());
+            monitorQueueSize.decrement();
             failedJobCount.increment();
             runOutflowTasks = true;
 	        jobStatus.setJobState(JobState.FAILED);
@@ -387,7 +388,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
             log.info("[EJM]: Job failed email received , removed job from job monitoring. " + jobDetails);
         }else if (resultState == JobState.CANCELED) {
             jobMonitorMap.remove(jobStatusResult.getJobId());
-            monitorQueueSize.record(jobMonitorMap.size());
+            monitorQueueSize.decrement();
             jobStatus.setJobState(JobState.CANCELED);
 	        jobStatus.setReason("Canceled email received");
             jobStatus.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());
