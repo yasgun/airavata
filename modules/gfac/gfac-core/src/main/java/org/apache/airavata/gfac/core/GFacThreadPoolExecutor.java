@@ -37,6 +37,7 @@ public class GFacThreadPoolExecutor {
     private static ExecutorService threadPool;
     private static Histogram threadPoolQueueSize = Kamon.metrics().histogram("GFacThreadPoolExecutor.queue-size");
     private static Histogram threadPoolActiveThreads = Kamon.metrics().histogram("GFacThreadPoolExecutor.active-threads");
+    private static Histogram threadPoolTotalThreads = Kamon.metrics().histogram("OrchestratorServerThreadPoolExecutor.total-threads");
 
 
     public static ExecutorService getCachedThreadPool() {
@@ -61,5 +62,6 @@ public class GFacThreadPoolExecutor {
     public static void record() {
         threadPoolQueueSize.record(((ThreadPoolExecutor)threadPool).getQueue().size());
         threadPoolActiveThreads.record(((ThreadPoolExecutor)threadPool).getActiveCount());
+        threadPoolTotalThreads.record(((ThreadPoolExecutor)threadPool).getPoolSize());
     }
 }

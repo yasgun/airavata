@@ -94,7 +94,6 @@ public class GfacServerHandler implements GfacService.Iface {
     private MinMaxCounter consumedCount = Kamon.metrics().minMaxCounter(String.format("%s.consumed-count", getClass().getName()));
     private Histogram threadPoolQueueSize = Kamon.metrics().histogram(String.format("%s.queue-size", getClass().getName()));
     private Histogram threadPoolActiveThreads = Kamon.metrics().histogram(String.format("%s.active-threads", getClass().getName()));
-    private Histogram threadPoolTotalThreads = Kamon.metrics().histogram(String.format("%s.total-threads", getClass().getName()));
 
 
     public GfacServerHandler() throws AiravataStartupException {
@@ -186,7 +185,6 @@ public class GfacServerHandler implements GfacService.Iface {
     private void recordThreadPool() {
         threadPoolQueueSize.record(((ThreadPoolExecutor)executorService).getQueue().size());
         threadPoolActiveThreads.record(((ThreadPoolExecutor)executorService).getActiveCount());
-        threadPoolTotalThreads.record(((ThreadPoolExecutor)executorService).getPoolSize());
     }
 
     @Override
