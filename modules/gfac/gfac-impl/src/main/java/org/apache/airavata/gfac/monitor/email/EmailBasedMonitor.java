@@ -200,7 +200,8 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
         boolean quite = false;
 
 	    while (!stopMonitoring && !ServerSettings.isStopAllThreads()) {
-		    try {
+            GFacThreadPoolExecutor.record();
+            try {
 			    session = Session.getDefaultInstance(properties);
 			    store = session.getStore(storeProtocol);
 			    store.connect(host, emailAddress, password);
