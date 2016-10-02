@@ -21,7 +21,8 @@
 package org.apache.airavata.gfac.server;
 
 import kamon.Kamon;
-import kamon.metric.instrument.Counter;
+import kamon.metric.instrument.Histogram;
+import kamon.metric.instrument.MinMaxCounter;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.exception.AiravataStartupException;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
@@ -62,6 +63,7 @@ import org.apache.thrift.TException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.Stat;
+import org.eclipse.jetty.util.thread.ThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -73,11 +75,13 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static sun.java2d.Disposer.getQueue;
 
 public class GfacServerHandler implements GfacService.Iface {
     private final static Logger log = LoggerFactory.getLogger(GfacServerHandler.class);
     private Subscriber processLaunchSubscriber;
-    private static int requestCount=0;
     private ExperimentCatalog experimentCatalog;
     private AppCatalog appCatalog;
     private String airavataUserName;
@@ -87,7 +91,11 @@ public class GfacServerHandler implements GfacService.Iface {
     private BlockingQueue<TaskSubmitEvent> taskSubmitEvents;
     private static List<AbstractActivityListener> activityListeners = new ArrayList<AbstractActivityListener>();
     private ExecutorService executorService;
-    private Counter consumedCount = Kamon.metrics().counter(String.format("%s.consumed-count", getClass().getCanonicalName()));
+    private MinMaxCounter consumedCount = Kamon.metrics().minMaxCounter(String.format("%s.consumed-count", getClass().getName()));
+    private Histogram threadPoolQueueSize = Kamon.metrics().histogram(String.format("%s.queue-size", getClass().getName()));
+    private Histogram threadPoolActiveThreads = Kamon.metrics().histogram(String.format("%s.active-threads", getClass().getName()));
+    private Histogram threadPoolTotalThreads = Kamon.metrics().histogram(String.format("%s.total-threads", getClass().getName()));
+
 
     public GfacServerHandler() throws AiravataStartupException {
         try {
@@ -163,7 +171,8 @@ public class GfacServerHandler implements GfacService.Iface {
         MDC.put(MDCConstants.GATEWAY_ID, gatewayId);
         MDC.put(MDCConstants.TOKEN_ID, tokenId);
         try {
-	        executorService.execute(MDCUtil.wrapWithMDC(new GFacWorker(processId, gatewayId, tokenId)));
+            recordThreadPool();
+            executorService.execute(MDCUtil.wrapWithMDC(new GFacWorker(processId, gatewayId, tokenId)));
         } catch (GFacException e) {
             log.error("Failed to submit process", e);
 
@@ -172,6 +181,12 @@ public class GfacServerHandler implements GfacService.Iface {
 	        log.error("Error creating zookeeper nodes");
         }
 	    return true;
+    }
+
+    private void recordThreadPool() {
+        threadPoolQueueSize.record(((ThreadPoolExecutor)executorService).getQueue().size());
+        threadPoolActiveThreads.record(((ThreadPoolExecutor)executorService).getActiveCount());
+        threadPoolTotalThreads.record(((ThreadPoolExecutor)executorService).getPoolSize());
     }
 
     @Override

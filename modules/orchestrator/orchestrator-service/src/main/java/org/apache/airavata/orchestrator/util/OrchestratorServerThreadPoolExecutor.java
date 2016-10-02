@@ -23,20 +23,27 @@ package org.apache.airavata.orchestrator.util;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 
+import kamon.Kamon;
+import kamon.metric.instrument.Histogram;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
 import org.apache.airavata.common.utils.ServerSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OrchestratorServerThreadPoolExecutor {
-	    private final static Logger logger = LoggerFactory.getLogger(OrchestratorServerThreadPoolExecutor.class);
-	    public static final String AIRAVATA_SERVER_THREAD_POOL_SIZE = "airavata.server.thread.pool.size";
+	private final static Logger logger = LoggerFactory.getLogger(OrchestratorServerThreadPoolExecutor.class);
+	public static final String AIRAVATA_SERVER_THREAD_POOL_SIZE = "airavata.server.thread.pool.size";
 
-	    private static ExecutorService threadPool;
+	private static ExecutorService threadPool;
+	private static Histogram threadPoolQueueSize = Kamon.metrics().histogram("OrchestratorServerThreadPoolExecutor.queue-size");
+	private static Histogram threadPoolActiveThreads = Kamon.metrics().histogram("OrchestratorServerThreadPoolExecutor.active-threads");
+	private static Histogram threadPoolTotalThreads = Kamon.metrics().histogram("OrchestratorServerThreadPoolExecutor.total-threads");
 
-	    public static ExecutorService getCachedThreadPool() {
+
+	public static ExecutorService getCachedThreadPool() {
 	        if(threadPool ==null){
 	            threadPool = Executors.newCachedThreadPool();
 	        }
@@ -53,4 +60,10 @@ public class OrchestratorServerThreadPoolExecutor {
 	        }
 	        return threadPool;
 	    }
+
+	public static void record() {
+		threadPoolQueueSize.record(((ThreadPoolExecutor)threadPool).getQueue().size());
+		threadPoolActiveThreads.record(((ThreadPoolExecutor)threadPool).getActiveCount());
+		threadPoolTotalThreads.record(((ThreadPoolExecutor)threadPool).getPoolSize());
+	}
 }

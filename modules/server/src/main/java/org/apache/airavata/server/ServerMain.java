@@ -222,6 +222,7 @@ public class ServerMain {
 			}
 		}
 		if (hasStopRequested()){
+			Kamon.shutdown();
             ServerSettings.setStopAllThreads(true);
 			stopAllServers();
 			ShutdownStrategy shutdownStrategy;

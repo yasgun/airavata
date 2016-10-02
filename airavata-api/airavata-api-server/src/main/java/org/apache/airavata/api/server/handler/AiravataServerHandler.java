@@ -22,7 +22,7 @@
 package org.apache.airavata.api.server.handler;
 
 import kamon.Kamon;
-import kamon.metric.instrument.Counter;
+import kamon.metric.instrument.MinMaxCounter;
 import org.apache.airavata.api.Airavata;
 import org.apache.airavata.api.airavata_apiConstants;
 import org.apache.airavata.api.server.security.interceptor.SecurityCheck;
@@ -93,9 +93,9 @@ public class AiravataServerHandler implements Airavata.Iface {
     private Publisher statusPublisher;
     private Publisher experimentPublisher;
     private CredentialStoreService.Client csClient;
-    private Counter experimentPublishCount = Kamon.metrics().counter(String.format("%s.experiment.publish-count", getClass().getCanonicalName()));
-    private Counter experimentLaunchPublishCount = Kamon.metrics().counter(String.format("%s.experiment_launch.publish-count", getClass().getCanonicalName()));
-    private Counter experimentCancelPublishCount = Kamon.metrics().counter(String.format("%s.experiment_cancel.publish-count", getClass().getCanonicalName()));
+    private MinMaxCounter experimentPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment.publish-count", getClass().getName()));
+    private MinMaxCounter experimentLaunchPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_launch.publish-count", getClass().getName()));
+    private MinMaxCounter experimentCancelPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_cancel.publish-count", getClass().getName()));
 
     public AiravataServerHandler() {
         try {

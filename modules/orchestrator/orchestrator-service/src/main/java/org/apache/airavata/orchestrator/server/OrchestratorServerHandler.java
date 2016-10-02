@@ -22,7 +22,7 @@
 package org.apache.airavata.orchestrator.server;
 
 import kamon.Kamon;
-import kamon.metric.instrument.Counter;
+import kamon.metric.instrument.MinMaxCounter;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
 import org.apache.airavata.common.logging.MDCConstants;
@@ -74,6 +74,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 
 public class OrchestratorServerHandler implements OrchestratorService.Iface {
 	private static Logger log = LoggerFactory.getLogger(OrchestratorServerHandler.class);
@@ -87,15 +88,16 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 	private final Subscriber statusSubscribe;
 	private final Subscriber experimentSubscriber;
 	private CuratorFramework curatorClient;
-    private Counter publishCount = Kamon.metrics().counter(String.format("%s.publish-count", getClass().getCanonicalName()));
-    private Counter publishFail = Kamon.metrics().counter(String.format("%s.publish-fail-count", getClass().getCanonicalName()));
-    private Counter processConsumeCount = Kamon.metrics().counter(String.format("%s.process.consume-count", getClass().getCanonicalName()));
-    private Counter experimentConsumeCount = Kamon.metrics().counter(String.format("%s.experiment.consume-count", getClass().getCanonicalName()));
-	private Counter experimentLaunchConsumeCount = Kamon.metrics().counter(String.format("%s.experiment_launch.consume-count", getClass().getCanonicalName()));
-	private Counter experimentCancelConsumeCount = Kamon.metrics().counter(String.format("%s.experiment_cancel.consume-count", getClass().getCanonicalName()));
-	private Counter unsupportedMessageCount = Kamon.metrics().counter(String.format("%s.unsupported-count", getClass().getCanonicalName()));
+    private MinMaxCounter publishCount = Kamon.metrics().minMaxCounter(String.format("%s.publish-count", getClass().getName()));
+    private MinMaxCounter publishFail = Kamon.metrics().minMaxCounter(String.format("%s.publish-fail-count", getClass().getName()));
+    private MinMaxCounter processConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.process.consume-count", getClass().getName()));
+    private MinMaxCounter experimentConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment.consume-count", getClass().getName()));
+	private MinMaxCounter experimentLaunchConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_launch.consume-count", getClass().getName()));
+	private MinMaxCounter experimentCancelConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_cancel.consume-count", getClass().getName()));
+	private MinMaxCounter unsupportedMessageCount = Kamon.metrics().minMaxCounter(String.format("%s.unsupported-count", getClass().getName()));
+	private ExecutorService cachedThreadPool;
 
-    /**
+	/**
 	 * Query orchestrator server to fetch the CPI version
 	 */
 	public String getOrchestratorCPIVersion() throws TException {
@@ -109,6 +111,7 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 			routingKeys.add(ServerSettings.getRabbitmqExperimentLaunchQueueName());
 			experimentSubscriber = MessagingFactory.getSubscriber(new ExperimentHandler(), routingKeys, Type.EXPERIMENT_LAUNCH);
 			setAiravataUserName(ServerSettings.getDefaultUser());
+			cachedThreadPool = OrchestratorServerThreadPoolExecutor.getCachedThreadPool();
 		} catch (AiravataException e) {
             log.error(e.getMessage(), e);
             throw new OrchestratorException("Error while initializing orchestrator service", e);
@@ -144,7 +147,8 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 	 */
 	public boolean launchExperiment(String experimentId, String gatewayId) throws TException {
         ExperimentModel experiment = null;
-        try {
+		OrchestratorServerThreadPoolExecutor.record();
+		try {
             String experimentNodePath = GFacUtils.getExperimentNodePath (experimentId);
 			ZKPaths.mkdirs(curatorClient.getZookeeperClient().getZooKeeper(), experimentNodePath);
 			String experimentCancelNode = ZKPaths.makePath(experimentNodePath, ZkConstants.ZOOKEEPER_CANCEL_LISTENER_NODE);
@@ -237,7 +241,7 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
                 status.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());
                 OrchestratorUtils.updageAndPublishExperimentStatus(experimentId, status, publisher, gatewayId);
                 log.info("expId: {}, Launched experiment ", experimentId);
-                OrchestratorServerThreadPoolExecutor.getCachedThreadPool().execute(MDCUtil.wrapWithMDC(new SingleAppExperimentRunner(experimentId, token, gatewayId)));
+				cachedThreadPool.execute(MDCUtil.wrapWithMDC(new SingleAppExperimentRunner(experimentId, token, gatewayId)));
             } else if (executionType == ExperimentType.WORKFLOW) {
                 //its a workflow execution experiment
                 log.debug(experimentId, "Launching workflow experiment {}.", experimentId);
@@ -249,6 +253,7 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
         } catch (Exception e) {
             throw new TException("Experiment '" + experimentId + "' launch failed. Unable to figureout execution type for application " + experiment.getExecutionId(), e);
         }
+        OrchestratorServerThreadPoolExecutor.record();
         return true;
 	}
 

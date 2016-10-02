@@ -25,7 +25,7 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import kamon.Kamon;
-import kamon.metric.instrument.Counter;
+import kamon.metric.instrument.MinMaxCounter;
 import kamon.metric.instrument.Histogram;
 import org.apache.airavata.gfac.core.SSHApiException;
 import org.slf4j.Logger;
@@ -45,11 +45,11 @@ import java.util.List;
  */
 public class SSHUtils {
 	private static final Logger log = LoggerFactory.getLogger(SSHUtils.class);
-	private static Histogram scpToBytes = Kamon.metrics().histogram(String.format("%s.scpTo-bytes", SSHUtils.class.getCanonicalName()));
-	private static Counter scpToFailedCount = Kamon.metrics().counter(String.format("%s.scpTo-fail", SSHUtils.class.getCanonicalName()));
+	private static Histogram scpToBytes = Kamon.metrics().histogram(String.format("%s.scpTo-bytes", SSHUtils.class.getName()));
+	private static MinMaxCounter scpToFailedCount = Kamon.metrics().minMaxCounter(String.format("%s.scpTo-fail", SSHUtils.class.getName()));
 
-	private static Histogram scpFromBytes = Kamon.metrics().histogram(String.format("%s.scpFrom-bytes", SSHUtils.class.getCanonicalName()));
-	private static Counter scpFromFailedCount = Kamon.metrics().counter(String.format("%s.scpFrom-fail", SSHUtils.class.getCanonicalName()));
+	private static Histogram scpFromBytes = Kamon.metrics().histogram(String.format("%s.scpFrom-bytes", SSHUtils.class.getName()));
+	private static MinMaxCounter scpFromFailedCount = Kamon.metrics().minMaxCounter(String.format("%s.scpFrom-fail", SSHUtils.class.getName()));
 
 	/**
 	 * This will copy a local file to a remote location

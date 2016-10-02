@@ -19,6 +19,8 @@
  */
 package org.apache.airavata.gfac.core;
 
+import kamon.Kamon;
+import kamon.metric.instrument.Histogram;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
 import org.apache.airavata.common.utils.ServerSettings;
 import org.slf4j.Logger;
@@ -26,12 +28,16 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class GFacThreadPoolExecutor {
     private final static Logger logger = LoggerFactory.getLogger(GFacThreadPoolExecutor.class);
     public static final String GFAC_THREAD_POOL_SIZE = "gfac.thread.pool.size";
 
     private static ExecutorService threadPool;
+    private static Histogram threadPoolQueueSize = Kamon.metrics().histogram("GFacThreadPoolExecutor.queue-size");
+    private static Histogram threadPoolActiveThreads = Kamon.metrics().histogram("GFacThreadPoolExecutor.active-threads");
+
 
     public static ExecutorService getCachedThreadPool() {
         if(threadPool ==null){
@@ -52,5 +58,8 @@ public class GFacThreadPoolExecutor {
         return threadPool;
     }
 
-
+    public static void record() {
+        threadPoolQueueSize.record(((ThreadPoolExecutor)threadPool).getQueue().size());
+        threadPoolActiveThreads.record(((ThreadPoolExecutor)threadPool).getActiveCount());
+    }
 }

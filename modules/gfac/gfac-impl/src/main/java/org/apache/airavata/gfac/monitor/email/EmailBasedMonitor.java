@@ -21,7 +21,7 @@
 package org.apache.airavata.gfac.monitor.email;
 
 import kamon.Kamon;
-import kamon.metric.instrument.Counter;
+import kamon.metric.instrument.MinMaxCounter;
 import kamon.metric.instrument.Histogram;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.utils.AiravataUtils;
@@ -53,6 +53,7 @@ import javax.mail.search.FlagTerm;
 import javax.mail.search.SearchTerm;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 
 public class EmailBasedMonitor implements JobMonitor, Runnable{
     private static final Logger log = LoggerFactory.getLogger(EmailBasedMonitor.class);
@@ -74,10 +75,11 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 	private Message[] flushUnseenMessages;
     private Map<String, Boolean> canceledJobs = new ConcurrentHashMap<>();
     private Timer timer;
-    private Histogram monitorQueueSize = Kamon.metrics().histogram(String.format("%s.monitor-queue-size", getClass().getCanonicalName()));
-    private Histogram cancelledJobs = Kamon.metrics().histogram(String.format("%s.cancelled-jobs", getClass().getCanonicalName()));
-    private Counter completedJobCount = Kamon.metrics().counter(String.format("%s.completed-jobs", getClass().getCanonicalName()));
-    private Counter failedJobCount = Kamon.metrics().counter(String.format("%s.failed-jobs", getClass().getCanonicalName()));
+    private Histogram monitorQueueSize = Kamon.metrics().histogram(String.format("%s.monitor-queue-size", getClass().getName()));
+    private Histogram cancelledJobs = Kamon.metrics().histogram(String.format("%s.cancelled-jobs", getClass().getName()));
+    private MinMaxCounter completedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.completed-jobs", getClass().getName()));
+    private MinMaxCounter failedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.failed-jobs", getClass().getName()));
+    private ExecutorService cachedThreadPool;
 
     public EmailBasedMonitor(Map<ResourceJobManagerType, ResourceConfig> resourceConfigs) throws AiravataException {
 		init();
@@ -99,6 +101,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
         timer = new Timer("CancelJobHandler", true);
         long period = 1000 * 60 * 5; // five minute delay between successive task executions.
         timer.schedule(new CancelTimerTask(), 0 , period);
+        cachedThreadPool = GFacThreadPoolExecutor.getCachedThreadPool();
     }
 
 	private void populateAddressAndParserMap(Map<ResourceJobManagerType, ResourceConfig> resourceConfigs) throws AiravataException {
@@ -133,6 +136,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 	public void stopMonitor(String jobId, boolean runOutflow) {
 		TaskContext taskContext = jobMonitorMap.remove(jobId);
         monitorQueueSize.record(jobMonitorMap.size());
+        GFacThreadPoolExecutor.record();
         if (taskContext != null && runOutflow) {
 			try {
                 ProcessContext pc = taskContext.getParentProcessContext();
@@ -150,12 +154,13 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
                 pStatus.setReason("Job cancelled");
                 pc.setProcessStatus(pStatus);
                 GFacUtils.saveAndPublishProcessStatus(pc);
-                GFacThreadPoolExecutor.getCachedThreadPool().execute(new GFacWorker(pc));
+                cachedThreadPool.execute(new GFacWorker(pc));
 			} catch (GFacException e) {
 				log.info("[EJM]: Error while running output tasks", e);
 			}
 		}
-	}
+        GFacThreadPoolExecutor.record();
+    }
 
     @Override
     public boolean isMonitoring(String jobId) {
@@ -338,6 +343,7 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
     }
 
     private void process(JobStatusResult jobStatusResult, TaskContext taskContext){
+        GFacThreadPoolExecutor.record();
         canceledJobs.remove(jobStatusResult.getJobId());
         cancelledJobs.record(canceledJobs.size());
         JobState resultState = jobStatusResult.getState();
@@ -413,11 +419,12 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
                     parentProcessContext.setProcessStatus(processStatus);
                     GFacUtils.saveAndPublishProcessStatus(parentProcessContext);
                 }
-		        GFacThreadPoolExecutor.getCachedThreadPool().execute(new GFacWorker(parentProcessContext));
+		        cachedThreadPool.execute(new GFacWorker(parentProcessContext));
 	        } catch (GFacException e) {
 		        log.info("[EJM]: Error while running output tasks", e);
 	        }
         }
+        GFacThreadPoolExecutor.record();
     }
 
     private void writeEnvelopeOnError(Message m) throws MessagingException {

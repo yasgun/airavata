@@ -26,7 +26,7 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UserInfo;
 import kamon.Kamon;
-import kamon.metric.instrument.Counter;
+import kamon.metric.instrument.MinMaxCounter;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.gfac.core.JobManagerConfiguration;
 import org.apache.airavata.gfac.core.SSHApiException;
@@ -53,13 +53,13 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 	private final SSHKeyAuthentication authentication;
 	private final JSch jSch;
 	private Session session;
-	private Counter submittedJobCount = Kamon.metrics().counter(String.format("%s.submitted-jobs", getClass().getCanonicalName()));
-	private Counter nonZeroExitCodeJobCount = Kamon.metrics().counter(String.format("%s.nonzero-exit-jobs", getClass().getCanonicalName()));
-	private Counter emptyJobIdCount = Kamon.metrics().counter(String.format("%s.empty-jobid-jobs", getClass().getCanonicalName()));
-	private Counter copyToFailCount = Kamon.metrics().counter(String.format("%s.copyTo-fail", getClass().getCanonicalName()));
-	private Counter copyFromFailCount = Kamon.metrics().counter(String.format("%s.copyFrom-fail", getClass().getCanonicalName()));
-	private Counter mkDirFailCount = Kamon.metrics().counter(String.format("%s.mkDir-fail", getClass().getCanonicalName()));
-	private Counter listFailCount = Kamon.metrics().counter(String.format("%s.list-fail", getClass().getCanonicalName()));
+	private MinMaxCounter submittedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.submitted-jobs", getClass().getName()));
+	private MinMaxCounter nonZeroExitCodeJobCount = Kamon.metrics().minMaxCounter(String.format("%s.nonzero-exit-jobs", getClass().getName()));
+	private MinMaxCounter emptyJobIdCount = Kamon.metrics().minMaxCounter(String.format("%s.empty-jobid-jobs", getClass().getName()));
+	private MinMaxCounter copyToFailCount = Kamon.metrics().minMaxCounter(String.format("%s.copyTo-fail", getClass().getName()));
+	private MinMaxCounter copyFromFailCount = Kamon.metrics().minMaxCounter(String.format("%s.copyFrom-fail", getClass().getName()));
+	private MinMaxCounter mkDirFailCount = Kamon.metrics().minMaxCounter(String.format("%s.mkDir-fail", getClass().getName()));
+	private MinMaxCounter listFailCount = Kamon.metrics().minMaxCounter(String.format("%s.list-fail", getClass().getName()));
 
 
 	public HPCRemoteCluster(ServerInfo serverInfo, JobManagerConfiguration jobManagerConfiguration, AuthenticationInfo
