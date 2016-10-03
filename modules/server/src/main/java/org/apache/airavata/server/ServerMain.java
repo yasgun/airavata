@@ -183,6 +183,7 @@ public class ServerMain {
 				((LoggerContext) iLoggerFactory).getLogger("org.apache.thrift").addAppender(kafkaAppender);
 				((LoggerContext) iLoggerFactory).getLogger("com").addAppender(kafkaAppender);
 				((LoggerContext) iLoggerFactory).getLogger("net").addAppender(kafkaAppender);
+				((LoggerContext) iLoggerFactory).getLogger("edu").addAppender(kafkaAppender);
 			} else {
 				logger.warn("Kafka logging is enabled but cannot find logback LoggerContext, found", iLoggerFactory.getClass().toString());
 				throw new AiravataException("Kafka logging is enabled but cannot find logback LoggerContext");
