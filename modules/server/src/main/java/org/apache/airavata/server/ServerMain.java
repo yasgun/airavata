@@ -20,7 +20,21 @@
  */
 package org.apache.airavata.server;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
 import ch.qos.logback.classic.LoggerContext;
+import com.google.common.collect.Maps;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+import kamon.metric.Entity;
+import kamon.metric.EntitySnapshot;
+import kamon.metric.SubscriptionsDispatcher;
+import kamon.metric.instrument.Counter;
+import kamon.metric.instrument.Histogram;
+import kamon.metric.instrument.MinMaxCounter;
 import org.apache.airavata.api.Airavata;
 import org.apache.airavata.common.exception.AiravataException;
 import kamon.Kamon;
@@ -32,17 +46,15 @@ import org.apache.airavata.common.utils.IServer.ServerStatus;
 import org.apache.airavata.common.utils.StringUtil.CommandLineParameters;
 import org.apache.commons.cli.ParseException;
 import org.apache.zookeeper.server.ServerCnxnFactory;
+import org.mortbay.jetty.Server;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.JavaConversions;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.util.*;
 
 public class ServerMain {
 
@@ -201,6 +213,89 @@ public class ServerMain {
 		}
     }
 
+	private static void startStatsServer() throws ApplicationSettingsException {
+		try {
+			HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+			server.createContext("/stats", new StatsHandler());
+			server.setExecutor(null);
+			server.start();
+		}catch (IOException e) {
+			throw new ApplicationSettingsException("Error starting stats server", e.getCause());
+		}
+	}
+
+	private static class StatsHandler implements HttpHandler {
+		Map<String, String> metrices = new HashMap<>();
+		final ActorSystem mySystem = ActorSystem.create("my-system");
+		final ActorRef subscriber = mySystem.actorOf(Props.create(KamonSnapShotter.class, metrices), "subscriber");
+
+		public StatsHandler() {
+			Kamon.metrics().subscribe("counter", "**",subscriber);
+			Kamon.metrics().subscribe("histogram", "**", subscriber);
+			Kamon.metrics().subscribe("minmaxcounter", "**", subscriber);
+		}
+
+
+		@Override
+		public void handle(HttpExchange httpExchange) throws IOException {
+
+			StringBuffer response = new StringBuffer("Airavata server metrices\n -----------------------\n");
+
+			synchronized (subscriber) {
+				for (Map.Entry<String, String> entry : metrices.entrySet()) {
+					response.append(entry.getKey()).append("=").append(entry.getValue());
+				}
+				httpExchange.sendResponseHeaders(200, response.length());
+				OutputStream os = httpExchange.getResponseBody();
+				os.write(response.toString().getBytes());
+				os.close();
+			}
+		}
+	}
+
+	private static class KamonSnapShotter extends UntypedActor {
+		Map<String, String> metrices = null;
+
+		public KamonSnapShotter(Map<String, String> metrices) {
+			this.metrices = metrices;
+		}
+
+		@Override
+		public void onReceive(Object message) throws Exception {
+				if (message instanceof SubscriptionsDispatcher.TickMetricSnapshot) {
+					final SubscriptionsDispatcher.TickMetricSnapshot tickSnapshot = (SubscriptionsDispatcher.TickMetricSnapshot) message;
+					final Map<Entity, EntitySnapshot> histograms = filterCategory("histogram", tickSnapshot);
+					final Map<Entity, EntitySnapshot> minMaxCounter = filterCategory("minmaxcounter", tickSnapshot);
+
+					histograms.forEach((e, s) -> {
+						final Histogram.Snapshot histogramSnapshot = s.histogram("histogram").get();
+						final String value = String.format("recordings:%s, min: %d, max: %d, 95percentile: %d\n", histogramSnapshot.numberOfMeasurements(),
+								histogramSnapshot.min(), histogramSnapshot.max(), histogramSnapshot.percentile(95));
+						metrices.put(e.name(), value);
+					});
+
+					minMaxCounter.forEach((e, s) -> {
+						final Histogram.Snapshot histogramSnapshot = s.minMaxCounter("minmaxcounter").get();
+						final String value = String.format("recordings:%s, min: %d, max: %d, 95percentile: %d\n", histogramSnapshot.numberOfMeasurements(),
+								histogramSnapshot.min(), histogramSnapshot.max(), histogramSnapshot.percentile(95));
+						metrices.put(e.name(), value);
+					});
+				} else unhandled(message);
+		}
+
+		public Map<String, String> getMetrices() {
+			return metrices;
+		}
+
+		public void setMetrices(Map<String, String> metrices) {
+			this.metrices = metrices;
+		}
+
+		private Map<Entity, EntitySnapshot> filterCategory(String categoryName, SubscriptionsDispatcher.TickMetricSnapshot snapshot) {
+			return Maps.filterKeys(JavaConversions.mapAsJavaMap(snapshot.metrics()), (e) -> e.category().equals(categoryName));
+		}
+	}
+
 
 
     private static void performServerStart(String[] args) {
@@ -213,9 +308,12 @@ public class ServerMain {
 		try {
 			serverNames = ApplicationSettings.getSetting(SERVERS_KEY);
 			startAllServers(serverNames);
+			startStatsServer();
 		} catch (ApplicationSettingsException e1) {
 			logger.error("Error finding servers property");
 		}
+
+
 		while(!hasStopRequested()){
 			try {
 				Thread.sleep(2000);
