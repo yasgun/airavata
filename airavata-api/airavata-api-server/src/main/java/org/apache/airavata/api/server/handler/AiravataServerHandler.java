@@ -93,9 +93,9 @@ public class AiravataServerHandler implements Airavata.Iface {
     private Publisher statusPublisher;
     private Publisher experimentPublisher;
     private CredentialStoreService.Client csClient;
-    private MinMaxCounter experimentPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment.publish-count", getClass().getName()));
-    private MinMaxCounter experimentLaunchPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_launch.publish-count", getClass().getName()));
-    private MinMaxCounter experimentCancelPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_cancel.publish-count", getClass().getName()));
+    private MinMaxCounter experimentPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment.publish-count", getClass().getSimpleName()));
+    private MinMaxCounter experimentLaunchPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_launch.publish-count", getClass().getSimpleName()));
+    private MinMaxCounter experimentCancelPublishCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_cancel.publish-count", getClass().getSimpleName()));
 
     public AiravataServerHandler() {
         try {

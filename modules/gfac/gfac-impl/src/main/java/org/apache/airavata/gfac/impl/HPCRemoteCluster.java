@@ -53,13 +53,13 @@ public class HPCRemoteCluster extends AbstractRemoteCluster{
 	private final SSHKeyAuthentication authentication;
 	private final JSch jSch;
 	private Session session;
-	private MinMaxCounter submittedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.submitted-jobs", getClass().getName()));
-	private MinMaxCounter nonZeroExitCodeJobCount = Kamon.metrics().minMaxCounter(String.format("%s.nonzero-exit-jobs", getClass().getName()));
-	private MinMaxCounter emptyJobIdCount = Kamon.metrics().minMaxCounter(String.format("%s.empty-jobid-jobs", getClass().getName()));
-	private MinMaxCounter copyToFailCount = Kamon.metrics().minMaxCounter(String.format("%s.copyTo-fail", getClass().getName()));
-	private MinMaxCounter copyFromFailCount = Kamon.metrics().minMaxCounter(String.format("%s.copyFrom-fail", getClass().getName()));
-	private MinMaxCounter mkDirFailCount = Kamon.metrics().minMaxCounter(String.format("%s.mkDir-fail", getClass().getName()));
-	private MinMaxCounter listFailCount = Kamon.metrics().minMaxCounter(String.format("%s.list-fail", getClass().getName()));
+	private MinMaxCounter submittedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.submitted-jobs", getClass().getSimpleName()));
+	private MinMaxCounter nonZeroExitCodeJobCount = Kamon.metrics().minMaxCounter(String.format("%s.nonzero-exit-jobs", getClass().getSimpleName()));
+	private MinMaxCounter emptyJobIdCount = Kamon.metrics().minMaxCounter(String.format("%s.empty-jobid-jobs", getClass().getSimpleName()));
+	private MinMaxCounter copyToFailCount = Kamon.metrics().minMaxCounter(String.format("%s.copyTo-fail", getClass().getSimpleName()));
+	private MinMaxCounter copyFromFailCount = Kamon.metrics().minMaxCounter(String.format("%s.copyFrom-fail", getClass().getSimpleName()));
+	private MinMaxCounter mkDirFailCount = Kamon.metrics().minMaxCounter(String.format("%s.mkDir-fail", getClass().getSimpleName()));
+	private MinMaxCounter listFailCount = Kamon.metrics().minMaxCounter(String.format("%s.list-fail", getClass().getSimpleName()));
 
 
 	public HPCRemoteCluster(ServerInfo serverInfo, JobManagerConfiguration jobManagerConfiguration, AuthenticationInfo

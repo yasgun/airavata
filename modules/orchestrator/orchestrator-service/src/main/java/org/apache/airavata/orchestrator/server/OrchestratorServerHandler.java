@@ -88,13 +88,13 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 	private final Subscriber statusSubscribe;
 	private final Subscriber experimentSubscriber;
 	private CuratorFramework curatorClient;
-    private MinMaxCounter publishCount = Kamon.metrics().minMaxCounter(String.format("%s.publish-count", getClass().getName()));
-    private MinMaxCounter publishFail = Kamon.metrics().minMaxCounter(String.format("%s.publish-fail-count", getClass().getName()));
-    private MinMaxCounter processConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.process.consume-count", getClass().getName()));
-    private MinMaxCounter experimentConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment.consume-count", getClass().getName()));
-	private MinMaxCounter experimentLaunchConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_launch.consume-count", getClass().getName()));
-	private MinMaxCounter experimentCancelConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_cancel.consume-count", getClass().getName()));
-	private MinMaxCounter unsupportedMessageCount = Kamon.metrics().minMaxCounter(String.format("%s.unsupported-count", getClass().getName()));
+    private MinMaxCounter publishCount = Kamon.metrics().minMaxCounter(String.format("%s.publish-count", getClass().getSimpleName()));
+    private MinMaxCounter publishFail = Kamon.metrics().minMaxCounter(String.format("%s.publish-fail-count", getClass().getSimpleName()));
+    private MinMaxCounter processConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.process.consume-count", getClass().getSimpleName()));
+    private MinMaxCounter experimentConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment.consume-count", getClass().getSimpleName()));
+	private MinMaxCounter experimentLaunchConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_launch.consume-count", getClass().getSimpleName()));
+	private MinMaxCounter experimentCancelConsumeCount = Kamon.metrics().minMaxCounter(String.format("%s.experiment_cancel.consume-count", getClass().getSimpleName()));
+	private MinMaxCounter unsupportedMessageCount = Kamon.metrics().minMaxCounter(String.format("%s.unsupported-count", getClass().getSimpleName()));
 	private ExecutorService cachedThreadPool;
 
 	/**

@@ -91,9 +91,9 @@ public class GfacServerHandler implements GfacService.Iface {
     private BlockingQueue<TaskSubmitEvent> taskSubmitEvents;
     private static List<AbstractActivityListener> activityListeners = new ArrayList<AbstractActivityListener>();
     private ExecutorService executorService;
-    private MinMaxCounter consumedCount = Kamon.metrics().minMaxCounter(String.format("%s.consumed-count", getClass().getName()));
-    private Histogram threadPoolQueueSize = Kamon.metrics().histogram(String.format("%s.queue-size", getClass().getName()));
-    private Histogram threadPoolActiveThreads = Kamon.metrics().histogram(String.format("%s.active-threads", getClass().getName()));
+    private MinMaxCounter consumedCount = Kamon.metrics().minMaxCounter(String.format("%s.consumed-count", getClass().getSimpleName()));
+    private Histogram threadPoolQueueSize = Kamon.metrics().histogram(String.format("%s.queue-size", getClass().getSimpleName()));
+    private Histogram threadPoolActiveThreads = Kamon.metrics().histogram(String.format("%s.active-threads", getClass().getSimpleName()));
 
 
     public GfacServerHandler() throws AiravataStartupException {

@@ -75,11 +75,11 @@ public class EmailBasedMonitor implements JobMonitor, Runnable{
 	private Message[] flushUnseenMessages;
     private Map<String, Boolean> canceledJobs = new ConcurrentHashMap<>();
     private Timer timer;
-    private MinMaxCounter monitorQueueSize = Kamon.metrics().minMaxCounter(String.format("%s.monitor-queue-size", getClass().getName()));
-    private MinMaxCounter cancelledJobs = Kamon.metrics().minMaxCounter(String.format("%s.cancelled-jobs", getClass().getName()));
-    private MinMaxCounter completedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.completed-jobs", getClass().getName()));
-    private MinMaxCounter failedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.failed-jobs", getClass().getName()));
-    private Histogram receivedEmailCount = Kamon.metrics().histogram(String.format("%s.received-emails", getClass().getName()));
+    private MinMaxCounter monitorQueueSize = Kamon.metrics().minMaxCounter(String.format("%s.monitor-queue-size", getClass().getSimpleName()));
+    private MinMaxCounter cancelledJobs = Kamon.metrics().minMaxCounter(String.format("%s.cancelled-jobs", getClass().getSimpleName()));
+    private MinMaxCounter completedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.completed-jobs", getClass().getSimpleName()));
+    private MinMaxCounter failedJobCount = Kamon.metrics().minMaxCounter(String.format("%s.failed-jobs", getClass().getSimpleName()));
+    private Histogram receivedEmailCount = Kamon.metrics().histogram(String.format("%s.received-emails", getClass().getSimpleName()));
 
     private ExecutorService cachedThreadPool;
 
