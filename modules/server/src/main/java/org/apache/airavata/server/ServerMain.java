@@ -230,9 +230,9 @@ public class ServerMain {
 		final ActorRef subscriber = mySystem.actorOf(Props.create(KamonSnapShotter.class, metrices), "subscriber");
 
 		public StatsHandler() {
-			Kamon.metrics().subscribe("counter", "**",subscriber);
-			Kamon.metrics().subscribe("histogram", "**", subscriber);
-			Kamon.metrics().subscribe("minmaxcounter", "**", subscriber);
+			Kamon.metrics().subscribe("counter", "**", subscriber, true);
+			Kamon.metrics().subscribe("histogram", "**", subscriber, true);
+			Kamon.metrics().subscribe("min-max-counter", "**", subscriber, true);
 		}
 
 
@@ -265,18 +265,18 @@ public class ServerMain {
 				if (message instanceof SubscriptionsDispatcher.TickMetricSnapshot) {
 					final SubscriptionsDispatcher.TickMetricSnapshot tickSnapshot = (SubscriptionsDispatcher.TickMetricSnapshot) message;
 					final Map<Entity, EntitySnapshot> histograms = filterCategory("histogram", tickSnapshot);
-					final Map<Entity, EntitySnapshot> minMaxCounter = filterCategory("minmaxcounter", tickSnapshot);
+					final Map<Entity, EntitySnapshot> minMaxCounter = filterCategory("min-max-counter", tickSnapshot);
 
 					histograms.forEach((e, s) -> {
 						final Histogram.Snapshot histogramSnapshot = s.histogram("histogram").get();
-						final String value = String.format("recordings:%s, min: %d, max: %d, 95percentile: %d\n", histogramSnapshot.numberOfMeasurements(),
+						final String value = String.format("min: %d, max: %d, 95percentile: %d\n",
 								histogramSnapshot.min(), histogramSnapshot.max(), histogramSnapshot.percentile(95));
 						metrices.put(e.name(), value);
 					});
 
 					minMaxCounter.forEach((e, s) -> {
-						final Histogram.Snapshot histogramSnapshot = s.minMaxCounter("minmaxcounter").get();
-						final String value = String.format("recordings:%s, min: %d, max: %d, 95percentile: %d\n", histogramSnapshot.numberOfMeasurements(),
+						final Histogram.Snapshot histogramSnapshot = s.minMaxCounter("min-max-counter").get();
+						final String value = String.format("min: %d, max: %d, 95percentile: %d\n",
 								histogramSnapshot.min(), histogramSnapshot.max(), histogramSnapshot.percentile(95));
 						metrices.put(e.name(), value);
 					});
