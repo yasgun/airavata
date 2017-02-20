@@ -660,6 +660,8 @@
                 <!--<module>modules/xbaya-gui</module>-->
                 <module>modules/distribution</module>
                 <module>modules/test-suite</module>
+
+                <module>sandbox/git-app-catalog</module>
             </modules>
         </profile>
         <profile>
