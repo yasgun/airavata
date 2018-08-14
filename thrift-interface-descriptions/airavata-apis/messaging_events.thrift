@@ -43,7 +43,11 @@ enum MessageType {
     LAUNCHPROCESS,
     TERMINATEPROCESS,
     PROCESSOUTPUT,
-    DB_EVENT
+    DB_EVENT,
+    WORKFLOW_LAUNCH,
+    WORKFLOW_CANCEL,
+    WORKFLOW_PAUSE,
+    WORKFLOW_RESTART,
 }
 
 struct ExperimentStatusChangeEvent {
@@ -109,6 +113,11 @@ struct JobIdentifier {
 //    // FIXME - Job execution context
 //    //8:
 // }
+
+struct WorkflowSubmitEvent{
+    1: required string workflowId,
+    2: required string gatewayId,
+}
 
 struct ExperimentSubmitEvent{
     1: required string experimentId,

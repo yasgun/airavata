@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,11 +17,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.airavata.messaging.core;
+package org.apache.airavata.orchestrator.workflow.handler;
 
-public enum Type {
-    WORKFLOW,
-    EXPERIMENT_LAUNCH,
-    PROCESS_LAUNCH,
-    STATUS
+import org.apache.airavata.helix.task.api.TaskHelper;
+import org.apache.airavata.helix.task.api.annotation.TaskDef;
+import org.apache.airavata.orchestrator.workflow.core.WorkflowTask;
+import org.apache.helix.task.TaskResult;
+
+@TaskDef(name = "Flow Starter Task")
+public class FlowStarterTask extends WorkflowTask {
+
+    @Override
+    public TaskResult onRun(TaskHelper helper) {
+        return null;
+    }
+
+    @Override
+    public void onCancel() {
+
+    }
 }
