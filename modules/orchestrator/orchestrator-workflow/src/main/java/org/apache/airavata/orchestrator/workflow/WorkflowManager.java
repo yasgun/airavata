@@ -31,7 +31,6 @@ import org.apache.airavata.messaging.core.*;
 import org.apache.airavata.model.messaging.event.WorkflowSubmitEvent;
 import org.apache.airavata.model.workflow.*;
 import org.apache.airavata.orchestrator.core.exception.OrchestratorException;
-import org.apache.airavata.orchestrator.core.utils.OrchestratorUtils;
 import org.apache.airavata.orchestrator.workflow.core.ApplicationTask;
 import org.apache.airavata.orchestrator.workflow.core.WorkflowTask;
 import org.apache.airavata.orchestrator.workflow.handler.DoWhileLoopTask;
@@ -140,18 +139,18 @@ public class WorkflowManager {
         return workflowOperator;
     }
 
-    public void launchWorkflow(String workflowId, String gatewayId) throws Exception {
+    public void launchWorkflow(String workflowId, String gatewayId) throws OrchestratorException {
         RegistryService.Client registryClient = getRegistryClientPool().getResource();
 
         AiravataWorkflow workflow;
+
         try {
             workflow = registryClient.getWorkflow(workflowId);
             getRegistryClientPool().returnResource(registryClient);
 
-        } catch (Exception e) {
-            logger.error("Failed to fetch workflow from registry associated with workflow id " + workflowId, e);
+        } catch (TException e) {
             getRegistryClientPool().returnBrokenResource(registryClient);
-            throw new Exception("Failed to fetch workflow from registry associated with workflow id " + workflowId, e);
+            throw new OrchestratorException("Failed to fetch workflow from registry associated with workflow id " + workflowId, e);
         }
 
         List<WorkflowApplication> workflowApps = workflow.getApplications();
@@ -161,7 +160,11 @@ public class WorkflowManager {
         HashMap<String, WorkflowTask> workflowTasks = new HashMap<>();
 
         for (WorkflowApplication app : workflowApps) {
-
+            WorkflowTask workflowTask = new ApplicationTask();
+            workflowTask.setTaskId(app.getId());
+            workflowTask.setWorkflowId(workflowId);
+            workflowTask.setWorkflowName(workflow.getName());
+            workflowTasks.put(app.getId(), workflowTask);
         }
 
         for (WorkflowHandler handler : workflowHandlers) {
@@ -202,8 +205,15 @@ public class WorkflowManager {
             }
         }
 
-        String workflowName = getWorkflowOperator().launchWorkflow(workflowId + "-PRE-" + UUID.randomUUID().toString(),
-                new ArrayList<>(workflowTasks.values()), true, false);
+        String workflowName;
+
+        try {
+            workflowName = getWorkflowOperator().launchWorkflow(workflowId + "-PRE-" + UUID.randomUUID().toString(),
+                    new ArrayList<>(workflowTasks.values()), true, false);
+        } catch (Exception e) {
+            throw new OrchestratorException("Failed to launch workflow with id: " + workflowId, e);
+        }
+
         try {
             MonitoringUtil.registerWorkflow(getCuratorClient(), workflowId, workflowName);
         } catch (Exception e) {
@@ -212,52 +222,58 @@ public class WorkflowManager {
         }
     }
 
-    //TODO be careful do not throw anything
     private class WorkflowMessageHandler implements MessageHandler {
         @Override
         public void onMessage(MessageContext messageContext) {
             switch (messageContext.getType()) {
                 case WORKFLOW_LAUNCH:
-//                    try {
+                    try {
                         WorkflowSubmitEvent submitEvent = new WorkflowSubmitEvent();
-//                        final RegistryService.Client registryClient = OrchestratorUtils.getRegistryClientPool()
-//                                .getResource();
+                        final RegistryService.Client registryClient = getRegistryClientPool().getResource();
 
                         try {
-                            byte[] bytes = ThriftUtils.serializeThriftObject(messageContext.getEvent());
-                            ThriftUtils.createThriftFromBytes(bytes, submitEvent);
+                            try {
+                                byte[] bytes = ThriftUtils.serializeThriftObject(messageContext.getEvent());
+                                ThriftUtils.createThriftFromBytes(bytes, submitEvent);
+                            } catch (TException e) {
+                                throw new OrchestratorException("Workflow launch failed due to Thrift conversion error", e);
+                            }
 
                             logger.info("Launching experiment with experiment id: {} gateway id: {}",
                                     submitEvent.getWorkflowId(), submitEvent.getGatewayId());
 
-//                            if (messageContext.isRedeliver()) {
-//                                AiravataWorkflow workflow = registryClient.getWorkflow(submitEvent.getWorkflowId());
-//                                if (workflow.getStatuses().get(0).getState() == WorkflowState.CREATED) {
-//                                    launchWorkflow(submitEvent.getWorkflowId(), submitEvent.getGatewayId());
-//                                }
-//                            } else {
-//                                launchWorkflow(submitEvent.getWorkflowId(), submitEvent.getGatewayId());
-//                            }
-                        } catch (TException e) {
-                            String logMessage = submitEvent.getWorkflowId() != null && submitEvent.getGatewayId() != null ?
-                                    String.format("Workflow launch failed due to Thrift conversion error, workflowId: %s, gatewayId: %s",
-                                            submitEvent.getWorkflowId(), submitEvent.getGatewayId()) :
-                                    "Experiment launch failed due to Thrift conversion error";
+                            if (messageContext.isRedeliver()) {
+                                AiravataWorkflow workflow;
 
-                            logger.error(logMessage, e);
+                                try {
+                                    workflow = registryClient.getWorkflow(submitEvent.getWorkflowId());
+                                    getRegistryClientPool().returnResource(registryClient);
 
-//                        } catch (OrchestratorException e) {
-//                            logger.error("Launching workflow with workflow id: {} gateway id: {} failed",
-//                                    submitEvent.getWorkflowId(), submitEvent.getGatewayId(), e);
-                        } catch (Exception e) {
-                            logger.error(e.getMessage(), e);
+                                } catch (TException e) {
+                                    getRegistryClientPool().returnBrokenResource(registryClient);
+                                    throw new OrchestratorException("Failed to fetch workflow from registry associated with workflow id " + submitEvent.getWorkflowId(), e);
+                                }
+
+                                if (workflow.getStatuses().get(0).getState() == WorkflowState.CREATED) {
+                                    launchWorkflow(submitEvent.getWorkflowId(), submitEvent.getGatewayId());
+                                }
+
+                            } else {
+                                launchWorkflow(submitEvent.getWorkflowId(), submitEvent.getGatewayId());
+                            }
+
+                        } catch (OrchestratorException e) {
+                            throw new OrchestratorException("Error occurred while handling workflow launch message with id: " +
+                                    messageContext.getMessageId() + " from gateway with id: " + messageContext.getGatewayId(), e);
                         } finally {
                             workflowSubscriber.sendAck(messageContext.getDeliveryTag());
-//                            OrchestratorUtils.getRegistryClientPool().returnResource(registryClient);
+                            getRegistryClientPool().returnResource(registryClient);
                         }
-//                    } catch (ApplicationSettingsException e) {
-//                        logger.error(e.getMessage(), e);
-//                    }
+
+                    } catch (Exception e) {
+                        //All exceptions sink here allowing message handler to continue
+                        logger.error("Error occurred while handling workflow launch message", e);
+                    }
                     break;
                 case WORKFLOW_CANCEL:
                     break;
