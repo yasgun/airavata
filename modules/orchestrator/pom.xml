@@ -46,6 +46,7 @@
                 <module>orchestrator-service</module>
                 <module>orchestrator-client</module>
                 <module>orchestrator-workflow</module>
+                <module>orchestrator-distribution</module>
             </modules>
         </profile>
     </profiles>
