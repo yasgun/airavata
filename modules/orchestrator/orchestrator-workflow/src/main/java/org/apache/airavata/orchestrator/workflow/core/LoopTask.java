@@ -24,63 +24,74 @@ import org.apache.airavata.common.utils.ServerSettings;
 import org.apache.airavata.common.utils.ThriftClientPool;
 import org.apache.airavata.helix.task.api.TaskHelper;
 import org.apache.airavata.helix.workflow.QueueOperator;
-import org.apache.airavata.model.workflow.WorkflowApplication;
-import org.apache.airavata.model.workflow.WorkflowConnection;
-import org.apache.airavata.model.workflow.WorkflowHandler;
 import org.apache.airavata.registry.api.RegistryService;
 import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.helix.task.TaskResult;
+import org.apache.helix.task.TaskState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
 
 public abstract class LoopTask extends WorkflowTask {
 
     private final static Logger logger = LoggerFactory.getLogger(LoopTask.class);
 
+    private String workflowManagerName;
+    private String loopQueueName;
+
     private ThriftClientPool<RegistryService.Client> registryClientPool;
 
     private QueueOperator queueOperator;
 
-    private List<WorkflowApplication> loopApps;
-    private List<WorkflowHandler> loopHandlers;
-    private List<WorkflowConnection> loopConnections;
-
-    private WorkflowHandler loopHandler;
+    private LoopTerminatorTask terminatorTask;
 
     @Override
     public TaskResult onRun(TaskHelper helper) {
         try {
+            this.workflowManagerName = ServerSettings.getSetting("user.workflow.manager.name");
+
             initRegistryClientPool();
             initQueueOperator();
-
-            RegistryService.Client registryClient = registryClientPool.getResource();
-
-            for (WorkflowHandler handler : registryClient.getWorkflow(getWorkflowId()).getHandlers()) {
-                if (handler.getId().equals(getTaskId())) {
-                    loopHandler = handler;
-
-                    loopApps = loopHandler.getApplications();
-                    loopHandlers = loopHandler.getHandlers();
-                    loopConnections = loopHandler.getConnections();
-                    break;
-                }
-            }
-
-            if (loopHandler == null) {
-                return onFail("Loop handler not found for loop with id: " + getTaskId(), false);
-            }
 
         } catch (Exception e) {
             logger.error("Loop with id: " + getTaskId() + " on workflow: " + getWorkflowId() + " initialization failed", e);
             return onFail("Loop with id: " + getTaskId() + " on workflow: " + getWorkflowId() + "initialization failed", false);
         }
 
-        return onLoopRun(helper);
+        loopQueueName = onLoop(helper);
+
+        while (true) {
+            try {
+                if (isCompleted() == TaskState.COMPLETED) {
+                    logger.info("Loop with id: " + getTaskId() + " on workflow with name: " + getWorkflowName() +
+                            " and id: " + getWorkflowId() + " completed successfully");
+                    break;
+                }
+            } catch (Exception e) {
+                logger.info("Polling for loop completion for loop: " + getTaskId() + " timed out and will continue with polling again.", e);
+                try {
+                    Thread.sleep(180000L);
+                } catch (InterruptedException e1) {
+                    // nothing needs to be done
+                }
+            }
+        }
+
+        return onSuccess("Loop with id: " + getTaskId() + " on workflow with name: " + getWorkflowName() + " and id: " +
+                getWorkflowId() + " completed");
     }
 
-    public abstract TaskResult onLoopRun(TaskHelper helper);
+    /**
+     * This method should be implemented based on the requirements of the loop type. This should be returned immediately
+     * without waiting for task completions after submitting the tasks.
+     *
+     * @param helper task helper
+     * @return name of the queue where the {@link LoopTerminatorTask} is submitted to be executed at the end of the loop
+     */
+    public abstract String onLoop(TaskHelper helper);
+
+    public TaskState isCompleted() throws InterruptedException {
+        return queueOperator.pollTaskState(loopQueueName, getTerminatorTask().getTaskId(), 180000L, TaskState.COMPLETED);
+    }
 
     private void initRegistryClientPool() throws ApplicationSettingsException {
 
@@ -101,27 +112,23 @@ public abstract class LoopTask extends WorkflowTask {
     private void initQueueOperator() throws Exception {
         queueOperator = new QueueOperator(
                 ServerSettings.getSetting("helix.cluster.name"),
-                getTaskId(),
+                workflowManagerName,
                 ServerSettings.getZookeeperConnection());
     }
 
-    public WorkflowHandler getLoopHandler() {
-        return loopHandler;
+    public LoopTerminatorTask getTerminatorTask() {
+        if (terminatorTask == null) {
+            terminatorTask = new LoopTerminatorTask();
+            terminatorTask.setTaskId(getTaskId() + "-terminator");
+        }
+        return terminatorTask;
     }
 
     public QueueOperator getQueueOperator() {
         return queueOperator;
     }
 
-    public List<WorkflowApplication> getLoopApps() {
-        return loopApps;
-    }
-
-    public List<WorkflowHandler> getLoopHandlers() {
-        return loopHandlers;
-    }
-
-    public List<WorkflowConnection> getLoopConnections() {
-        return loopConnections;
+    public ThriftClientPool<RegistryService.Client> getRegistryClientPool() {
+        return registryClientPool;
     }
 }

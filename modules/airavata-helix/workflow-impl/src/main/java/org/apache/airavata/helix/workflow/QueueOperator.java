@@ -72,6 +72,10 @@ public class QueueOperator {
         taskDriver = new TaskDriver(helixManager);
     }
 
+    public TaskState pollTaskState(String queueName, String taskId, Long timeout, TaskState state) throws InterruptedException {
+        return taskDriver.pollForJobState(queueName, taskId, timeout, state);
+    }
+
     /**
      * Creates a new Helix job queue and returns its name
      *

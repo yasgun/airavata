@@ -65,6 +65,14 @@ public class WorkflowOperator {
         taskDriver = new TaskDriver(helixManager);
     }
 
+    public TaskState pollTaskState(String workflowName, String taskId, Long timeout, TaskState state) throws InterruptedException {
+        return taskDriver.pollForJobState(workflowName, taskId, timeout, state);
+    }
+
+    public TaskState pollWorkflowState(String workflowName, Long timeout, TaskState state) throws InterruptedException {
+        return taskDriver.pollForWorkflowState(workflowName, timeout, state);
+    }
+
     public synchronized String launchWorkflow(String processId, List<AbstractTask> tasks, boolean globalParticipant, boolean monitor) throws Exception {
 
         String workflowName = WORKFLOW_PREFIX + processId;

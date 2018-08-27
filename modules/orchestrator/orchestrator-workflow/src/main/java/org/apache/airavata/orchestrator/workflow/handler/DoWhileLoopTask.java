@@ -26,7 +26,7 @@ import org.apache.helix.task.TaskResult;
 public class DoWhileLoopTask extends LoopTask {
 
     @Override
-    public TaskResult onLoopRun(TaskHelper helper) {
+    public String onLoop(TaskHelper helper) {
         return null;
     }
 

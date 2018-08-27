@@ -239,8 +239,8 @@ public class WorkflowManager {
                                 throw new OrchestratorException("Workflow launch failed due to Thrift conversion error", e);
                             }
 
-                            logger.info("Launching experiment with experiment id: {} gateway id: {}",
-                                    submitEvent.getWorkflowId(), submitEvent.getGatewayId());
+                            logger.info("Launching experiment with experiment id: " + submitEvent.getWorkflowId() +
+                                    " gateway id: " + submitEvent.getGatewayId());
 
                             if (messageContext.isRedeliver()) {
                                 AiravataWorkflow workflow;

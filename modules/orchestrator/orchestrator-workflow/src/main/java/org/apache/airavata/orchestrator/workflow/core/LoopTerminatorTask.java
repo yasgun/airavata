@@ -17,17 +17,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.airavata.orchestrator.workflow.handler;
+package org.apache.airavata.orchestrator.workflow.core;
 
 import org.apache.airavata.helix.task.api.TaskHelper;
-import org.apache.airavata.orchestrator.workflow.core.LoopTask;
+import org.apache.airavata.helix.task.api.annotation.TaskDef;
 import org.apache.helix.task.TaskResult;
 
-public class ForeachLoopTask extends LoopTask {
+@TaskDef(name = "Loop Terminator Task")
+public class LoopTerminatorTask extends WorkflowTask {
 
     @Override
-    public String onLoop(TaskHelper helper) {
-        return null;
+    public TaskResult onRun(TaskHelper helper) {
+        return onSuccess("Loop terminator task with id: " + getTaskId() + " on workflow with name: " + getWorkflowName() + " and id: " +
+                getWorkflowId() + " completed");
     }
 
     @Override
