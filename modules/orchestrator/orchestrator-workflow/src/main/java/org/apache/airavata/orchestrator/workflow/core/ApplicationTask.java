@@ -19,20 +19,772 @@
  */
 package org.apache.airavata.orchestrator.workflow.core;
 
+import org.apache.airavata.common.exception.AiravataException;
+import org.apache.airavata.common.exception.ApplicationSettingsException;
+import org.apache.airavata.common.logging.MDCConstants;
+import org.apache.airavata.common.logging.MDCUtil;
+import org.apache.airavata.common.utils.*;
+import org.apache.airavata.gfac.core.GFacConstants;
+import org.apache.airavata.gfac.core.GFacUtils;
+import org.apache.airavata.gfac.core.scheduler.HostScheduler;
 import org.apache.airavata.helix.task.api.TaskHelper;
 import org.apache.airavata.helix.task.api.annotation.TaskDef;
+import org.apache.airavata.messaging.core.*;
+import org.apache.airavata.model.appcatalog.appdeployment.ApplicationDeploymentDescription;
+import org.apache.airavata.model.appcatalog.appinterface.ApplicationInterfaceDescription;
+import org.apache.airavata.model.appcatalog.computeresource.ComputeResourceDescription;
+import org.apache.airavata.model.appcatalog.gatewayprofile.ComputeResourcePreference;
+import org.apache.airavata.model.appcatalog.gatewayprofile.GatewayResourceProfile;
+import org.apache.airavata.model.appcatalog.groupresourceprofile.GroupComputeResourcePreference;
+import org.apache.airavata.model.application.io.DataType;
+import org.apache.airavata.model.commons.ErrorModel;
+import org.apache.airavata.model.data.replica.DataProductModel;
+import org.apache.airavata.model.data.replica.DataReplicaLocationModel;
+import org.apache.airavata.model.data.replica.ReplicaLocationCategory;
+import org.apache.airavata.model.error.LaunchValidationException;
+import org.apache.airavata.model.experiment.ExperimentModel;
+import org.apache.airavata.model.experiment.ExperimentType;
+import org.apache.airavata.model.experiment.UserConfigurationDataModel;
+import org.apache.airavata.model.messaging.event.*;
+import org.apache.airavata.model.process.ProcessModel;
+import org.apache.airavata.model.status.ExperimentState;
+import org.apache.airavata.model.status.ExperimentStatus;
+import org.apache.airavata.model.workflow.WorkflowApplication;
+import org.apache.airavata.model.workflow.WorkflowHandler;
+import org.apache.airavata.orchestrator.core.exception.OrchestratorException;
+import org.apache.airavata.orchestrator.cpi.impl.SimpleOrchestratorImpl;
+import org.apache.airavata.orchestrator.util.OrchestratorServerThreadPoolExecutor;
+import org.apache.airavata.orchestrator.util.OrchestratorUtils;
+import org.apache.airavata.registry.api.RegistryService;
+import org.apache.airavata.registry.api.client.RegistryServiceClientFactory;
+import org.apache.airavata.registry.api.exception.RegistryServiceException;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.pool.impl.GenericObjectPool;
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.helix.task.TaskResult;
+import org.apache.thrift.TBase;
+import org.apache.thrift.TException;
+import org.apache.zookeeper.data.Stat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
-@TaskDef(name = "Echo Processor Task")
+import java.util.*;
+
+@TaskDef(name = "Application Processor Task")
 public class ApplicationTask extends WorkflowTask {
+
+    private static Logger log = LoggerFactory.getLogger(ApplicationTask.class);
+    private SimpleOrchestratorImpl orchestrator = null;
+    private static Integer mutex = new Integer(-1);
+    private String airavataUserName;
+    private String gatewayName;
+    private Publisher publisher;
+    private Subscriber statusSubscribe;
+    private Subscriber experimentSubscriber;
+    private CuratorFramework curatorClient;
+
+    private ThriftClientPool<RegistryService.Client> registryClientPool;
+    private WorkflowApplication workflowApplication;
 
     @Override
     public TaskResult onRun(TaskHelper helper) {
+        // orchestrator init
+        try {
+            // first constructing the monitorManager and orchestrator, then fill
+            // the required properties
+            setAiravataUserName(ServerSettings.getDefaultUser());
+            orchestrator = new SimpleOrchestratorImpl();
+
+            publisher = MessagingFactory.getPublisher(Type.STATUS);
+            orchestrator.initialize();
+            orchestrator.getOrchestratorContext().setPublisher(this.publisher);
+            statusSubscribe = getStatusSubscriber();
+            experimentSubscriber  = getExperimentSubscriber();
+            startCurator();
+        } catch (OrchestratorException | AiravataException e) {
+            log.error(e.getMessage(), e);
+//            throw new OrchestratorException("Error while initializing orchestrator service", e);
+        } catch (TException e) {
+            e.printStackTrace();
+        }
+
+        //todo organize
+
+        try {
+            initRegistryClientPool();
+        } catch (ApplicationSettingsException e) {
+            e.printStackTrace();
+        }
+
+        RegistryService.Client registryClient = registryClientPool.getResource();
+
+        try {
+            for (WorkflowApplication application : registryClient.getWorkflow(getWorkflowId()).getApplications()) {
+                if (application.getId().equals(getTaskId())) {
+                    workflowApplication = application;
+                }
+            }
+        }catch (Exception e){
+            //
+        }
+
         return null;
     }
 
     @Override
     public void onCancel() {
 
+    }
+
+    private void initRegistryClientPool() throws ApplicationSettingsException {
+
+        GenericObjectPool.Config poolConfig = new GenericObjectPool.Config();
+        poolConfig.maxActive = 100;
+        poolConfig.minIdle = 5;
+        poolConfig.whenExhaustedAction = GenericObjectPool.WHEN_EXHAUSTED_BLOCK;
+        poolConfig.testOnBorrow = true;
+        poolConfig.testWhileIdle = true;
+        poolConfig.numTestsPerEvictionRun = 10;
+        poolConfig.maxWait = 3000;
+
+        this.registryClientPool = new ThriftClientPool<>(
+                RegistryService.Client::new, poolConfig, ServerSettings.getRegistryServerHost(),
+                Integer.parseInt(ServerSettings.getRegistryServerPort()));
+    }
+
+    private Subscriber getStatusSubscriber() throws AiravataException {
+        List<String> routingKeys = new ArrayList<>();
+//			routingKeys.add("*"); // listen for gateway level messages
+//			routingKeys.add("*.*"); // listen for gateway/experiment level messages
+        routingKeys.add("*.*.*"); // listen for gateway/experiment/process level messages
+        return MessagingFactory.getSubscriber(new ProcessStatusHandler(),routingKeys, Type.STATUS);
+    }
+
+    private Subscriber getExperimentSubscriber() throws AiravataException {
+        List<String> routingKeys = new ArrayList<>();
+        routingKeys.add(ServerSettings.getRabbitmqExperimentLaunchQueueName());
+        return MessagingFactory.getSubscriber(new ExperimentHandler(), routingKeys, Type.EXPERIMENT_LAUNCH);
+    }
+
+    /**
+     * * After creating the experiment Data user have the * experimentID as the
+     * handler to the experiment, during the launchProcess * We just have to
+     * give the experimentID * * @param experimentID * @return sucess/failure *
+     * *
+     *
+     * @param experimentId
+     */
+    public boolean launchExperiment(String experimentId, String gatewayId) throws TException {
+        ExperimentModel experiment = null;
+        final RegistryService.Client registryClient = getRegistryServiceClient();
+        try {
+            String experimentNodePath = GFacUtils.getExperimentNodePath (experimentId);
+            ZKPaths.mkdirs(curatorClient.getZookeeperClient().getZooKeeper(), experimentNodePath);
+            String experimentCancelNode = ZKPaths.makePath(experimentNodePath, ZkConstants.ZOOKEEPER_CANCEL_LISTENER_NODE);
+            ZKPaths.mkdirs(curatorClient.getZookeeperClient().getZooKeeper(), experimentCancelNode);
+            experiment = registryClient.getExperiment(experimentId);
+            if (experiment == null) {
+                log.error("Error retrieving the Experiment by the given experimentID: {} ", experimentId);
+                return false;
+            }
+
+            UserConfigurationDataModel userConfigurationData = experiment.getUserConfigurationData();
+            ComputeResourcePreference computeResourcePreference = registryClient.getGatewayComputeResourcePreference
+                    (gatewayId,
+                            userConfigurationData.getComputationalResourceScheduling().getResourceHostId());
+            String token = computeResourcePreference.getResourceSpecificCredentialStoreToken();
+
+            final String groupResourceProfileId = userConfigurationData.getGroupResourceProfileId();
+            if (groupResourceProfileId == null) {
+                log.error("Experiment not configured with a Group Resource Profile: {}", experimentId);
+                return false;
+            }
+            GroupComputeResourcePreference groupComputeResourcePreference = registryClient.getGroupComputeResourcePreference(
+                    userConfigurationData.getComputationalResourceScheduling().getResourceHostId(),
+                    groupResourceProfileId);
+            if (groupComputeResourcePreference.getResourceSpecificCredentialStoreToken() != null) {
+                token = groupComputeResourcePreference.getResourceSpecificCredentialStoreToken();
+            }
+            if (token == null || token.isEmpty()){
+                // try with gateway profile level token
+                GatewayResourceProfile gatewayProfile = registryClient.getGatewayResourceProfile(gatewayId);
+                token = gatewayProfile.getCredentialStoreToken();
+            }
+            // still the token is empty, then we fail the experiment
+            if (token == null || token.isEmpty()){
+                log.error("You have not configured credential store token at gateway profile or compute resource preference." +
+                        " Please provide the correct token at gateway profile or compute resource preference.");
+                return false;
+            }
+            ExperimentType executionType = experiment.getExperimentType();
+            if (executionType == ExperimentType.SINGLE_APPLICATION) {
+                //its an single application execution experiment
+                List<ProcessModel> processes = orchestrator.createProcesses(experimentId, gatewayId);
+
+                for (ProcessModel processModel : processes){
+                    //FIXME Resolving replica if available. This is a very crude way of resolving input replicas. A full featured
+                    //FIXME replica resolving logic should come here
+                    processModel.getProcessInputs().stream().forEach(pi -> {
+                        if (pi.getType().equals(DataType.URI) && pi.getValue().startsWith("airavata-dp://")) {
+                            try {
+                                DataProductModel dataProductModel = registryClient.getDataProduct(pi.getValue());
+                                Optional<DataReplicaLocationModel> rpLocation = dataProductModel.getReplicaLocations()
+                                        .stream().filter(rpModel -> rpModel.getReplicaLocationCategory().
+                                                equals(ReplicaLocationCategory.GATEWAY_DATA_STORE)).findFirst();
+                                if (rpLocation.isPresent()) {
+                                    pi.setValue(rpLocation.get().getFilePath());
+                                    pi.setStorageResourceId(rpLocation.get().getStorageResourceId());
+                                } else {
+                                    log.error("Could not find a replica for the URI " + pi.getValue());
+                                }
+                            } catch (RegistryServiceException e) {
+                                throw new RuntimeException("Error while launching experiment", e);
+                            } catch (TException e) {
+                                throw new RuntimeException("Error while launching experiment", e);
+                            }
+                        } else if (pi.getType().equals(DataType.URI_COLLECTION) && pi.getValue().contains("airavata-dp://")) {
+                            try {
+                                String[] uriList = pi.getValue().split(",");
+                                final ArrayList<String> filePathList = new ArrayList<>();
+                                for (String uri : uriList) {
+                                    if (uri.startsWith("airavata-dp://")) {
+                                        DataProductModel dataProductModel = registryClient.getDataProduct(uri);
+                                        Optional<DataReplicaLocationModel> rpLocation = dataProductModel.getReplicaLocations()
+                                                .stream().filter(rpModel -> rpModel.getReplicaLocationCategory().
+                                                        equals(ReplicaLocationCategory.GATEWAY_DATA_STORE)).findFirst();
+                                        if (rpLocation.isPresent()) {
+                                            filePathList.add(rpLocation.get().getFilePath());
+                                        } else {
+                                            log.error("Could not find a replica for the URI " + pi.getValue());
+                                        }
+                                    } else {
+                                        // uri is in file path format
+                                        filePathList.add(uri);
+                                    }
+                                }
+                                pi.setValue(StringUtils.join(filePathList, ','));
+                            } catch (RegistryServiceException e) {
+                                throw new RuntimeException("Error while launching experiment", e);
+                            } catch (TException e) {
+                                throw new RuntimeException("Error while launching experiment", e);
+                            }
+                        }
+                    });
+                    String taskDag = orchestrator.createAndSaveTasks(gatewayId, processModel, experiment.getUserConfigurationData().isAiravataAutoSchedule());
+                    processModel.setTaskDag(taskDag);
+                    registryClient.updateProcess(processModel, processModel.getProcessId());
+                }
+
+                if (!validateProcess(experimentId, processes)) {
+                    log.error("Validating process fails for given experiment Id : {}", experimentId);
+                    return false;
+                }
+
+                log.debug(experimentId, "Launching single application experiment {}.", experimentId);
+                ExperimentStatus status = new ExperimentStatus(ExperimentState.LAUNCHED);
+                status.setReason("submitted all processes");
+                status.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());
+                OrchestratorUtils.updateAndPublishExperimentStatus(experimentId, status, publisher, gatewayId);
+                log.info("expId: {}, Launched experiment ", experimentId);
+                OrchestratorServerThreadPoolExecutor.getCachedThreadPool().execute(MDCUtil.wrapWithMDC(new SingleAppExperimentRunner(experimentId, token, gatewayId)));
+            } else if (executionType == ExperimentType.WORKFLOW) {
+                //its a workflow execution experiment
+                log.debug(experimentId, "Launching workflow experiment {}.", experimentId);
+                launchWorkflowExperiment(experimentId, token, gatewayId);
+            } else {
+                log.error(experimentId, "Couldn't identify experiment type, experiment {} is neither single application nor workflow.", experimentId);
+                throw new TException("Experiment '" + experimentId + "' launch failed. Unable to figureout execution type for application " + experiment.getExecutionId());
+            }
+        } catch (LaunchValidationException launchValidationException) {
+            ExperimentStatus status = new ExperimentStatus(ExperimentState.FAILED);
+            status.setReason("Validation failed: " + launchValidationException.getErrorMessage());
+            status.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());
+            OrchestratorUtils.updateAndPublishExperimentStatus(experimentId, status, publisher, gatewayId);
+            throw new TException("Experiment '" + experimentId + "' launch failed. Experiment failed to validate: " + launchValidationException.getErrorMessage(), launchValidationException);
+        } catch (Exception e) {
+            throw new TException("Experiment '" + experimentId + "' launch failed. Unable to figureout execution type for application " + experiment.getExecutionId(), e);
+        } finally {
+            if (registryClient != null) {
+                ThriftUtils.close(registryClient);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * This method will validate the experiment before launching, if is failed
+     * we do not run the launch in airavata thrift service (only if validation
+     * is enabled
+     *
+     * @param experimentId
+     * @return
+     * @throws TException
+     */
+    public boolean validateExperiment(String experimentId) throws TException, LaunchValidationException {
+        final RegistryService.Client registryClient = getRegistryServiceClient();
+        try {
+            ExperimentModel experimentModel = registryClient.getExperiment(experimentId);
+            return orchestrator.validateExperiment(experimentModel).isValidationState();
+        } catch (OrchestratorException e) {
+            log.error(experimentId, "Error while validating experiment", e);
+            throw new TException(e);
+        } finally {
+            if (registryClient != null) {
+                ThriftUtils.close(registryClient);
+            }
+        }
+    }
+
+    public boolean validateProcess(String experimentId, List<ProcessModel> processes) throws LaunchValidationException, TException {
+        final RegistryService.Client registryClient = getRegistryServiceClient();
+        try {
+            ExperimentModel experimentModel = registryClient.getExperiment(experimentId);
+            for (ProcessModel processModel : processes) {
+                boolean state = orchestrator.validateProcess(experimentModel, processModel).isSetValidationState();
+                if (!state) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (LaunchValidationException lve) {
+
+            // If a process failed to validate, also add an error message at the experiment level
+            ErrorModel details = new ErrorModel();
+            details.setActualErrorMessage(lve.getErrorMessage());
+            details.setCreationTime(Calendar.getInstance().getTimeInMillis());
+            registryClient.addErrors(GFacConstants.EXPERIMENT_ERROR, details, experimentId);
+            throw lve;
+        } catch (OrchestratorException e) {
+            log.error(experimentId, "Error while validating process", e);
+            throw new TException(e);
+        } finally {
+            if (registryClient != null) {
+                ThriftUtils.close(registryClient);
+            }
+        }
+    }
+
+    /**
+     * This can be used to cancel a running experiment and store the status to
+     * terminated in registry
+     *
+     * @param experimentId
+     * @return
+     * @throws TException
+     */
+    public boolean terminateExperiment(String experimentId, String gatewayId) throws TException {
+        final RegistryService.Client registryClient = getRegistryServiceClient();
+        log.info(experimentId, "Experiment: {} is cancelling  !!!!!", experimentId);
+        try {
+            return validateStatesAndCancel(registryClient, experimentId, gatewayId);
+        } catch (Exception e) {
+            log.error("expId : " + experimentId + " :- Error while cancelling experiment", e);
+            return false;
+        } finally {
+            if (registryClient != null) {
+                ThriftUtils.close(registryClient);
+            }
+        }
+    }
+
+    private String getAiravataUserName() {
+        return airavataUserName;
+    }
+
+    private String getGatewayName() {
+        return gatewayName;
+    }
+
+    public void setAiravataUserName(String airavataUserName) {
+        this.airavataUserName = airavataUserName;
+    }
+
+    public void setGatewayName(String gatewayName) {
+        this.gatewayName = gatewayName;
+    }
+
+    public boolean launchProcess(String processId, String airavataCredStoreToken, String gatewayId) throws TException {
+        final RegistryService.Client registryClient = getRegistryServiceClient();
+        try {
+            ProcessModel processModel = registryClient.getProcess(processId);
+            String applicationId = processModel.getApplicationInterfaceId();
+            if (applicationId == null) {
+                log.error(processId, "Application interface id shouldn't be null.");
+                throw new OrchestratorException("Error executing the job, application interface id shouldn't be null.");
+            }
+            // set application deployment id to process model
+            ApplicationDeploymentDescription applicationDeploymentDescription = getAppDeployment(registryClient, processModel, applicationId);
+            processModel.setApplicationDeploymentId(applicationDeploymentDescription.getAppDeploymentId());
+            // set compute resource id to process model, default we set the same in the user preferred compute host id
+            processModel.setComputeResourceId(processModel.getProcessResourceSchedule().getResourceHostId());
+            registryClient.updateProcess(processModel,processModel.getProcessId());
+            return orchestrator.launchProcess(processModel, airavataCredStoreToken);
+        } catch (Exception e) {
+            log.error(processId, "Error while launching process ", e);
+            throw new TException(e);
+        } finally {
+            if (registryClient != null) {
+                ThriftUtils.close(registryClient);
+            }
+        }
+    }
+
+    private ApplicationDeploymentDescription getAppDeployment(RegistryService.Client registryClient, ProcessModel processModel, String applicationId)
+            throws OrchestratorException,
+            ClassNotFoundException, ApplicationSettingsException,
+            InstantiationException, IllegalAccessException, TException {
+        String selectedModuleId = getModuleId(registryClient, applicationId);
+        return getAppDeploymentForModule(registryClient, processModel, selectedModuleId);
+    }
+
+    private ApplicationDeploymentDescription getAppDeploymentForModule(RegistryService.Client registryClient, ProcessModel processModel, String selectedModuleId)
+            throws ClassNotFoundException,
+            ApplicationSettingsException, InstantiationException,
+            IllegalAccessException, TException {
+
+        List<ApplicationDeploymentDescription> applicationDeployements = registryClient.getApplicationDeployments(selectedModuleId);
+        Map<ComputeResourceDescription, ApplicationDeploymentDescription> deploymentMap = new HashMap<ComputeResourceDescription, ApplicationDeploymentDescription>();
+
+        for (ApplicationDeploymentDescription deploymentDescription : applicationDeployements) {
+            if (processModel.getComputeResourceId().equals(deploymentDescription.getComputeHostId())) {
+                deploymentMap.put(registryClient.getComputeResource(deploymentDescription.getComputeHostId()), deploymentDescription);
+            }
+        }
+        List<ComputeResourceDescription> computeHostList = Arrays.asList(deploymentMap.keySet().toArray(new ComputeResourceDescription[]{}));
+        Class<? extends HostScheduler> aClass = Class.forName(
+                ServerSettings.getHostScheduler()).asSubclass(
+                HostScheduler.class);
+        HostScheduler hostScheduler = aClass.newInstance();
+        ComputeResourceDescription ComputeResourceDescription = hostScheduler.schedule(computeHostList);
+        return deploymentMap.get(ComputeResourceDescription);
+    }
+
+    private String getModuleId(RegistryService.Client registryClient, String applicationId)
+            throws OrchestratorException, TException {
+        ApplicationInterfaceDescription applicationInterface = registryClient.getApplicationInterface(applicationId);
+        List<String> applicationModules = applicationInterface.getApplicationModules();
+        if (applicationModules.size()==0){
+            throw new OrchestratorException(
+                    "No modules defined for application "
+                            + applicationId);
+        }
+//			AiravataAPI airavataAPI = getAiravataAPI();
+        String selectedModuleId=applicationModules.get(0);
+        return selectedModuleId;
+    }
+
+    private boolean validateStatesAndCancel(RegistryService.Client registryClient, String experimentId, String gatewayId) throws Exception {
+        ExperimentStatus experimentStatus = registryClient.getExperimentStatus(experimentId);
+        switch (experimentStatus.getState()) {
+            case COMPLETED: case CANCELED: case FAILED: case CANCELING:
+                log.warn("Can't terminate already {} experiment", experimentStatus.getState().name());
+                return false;
+            case CREATED:
+                log.warn("Experiment termination is only allowed for launched experiments.");
+                return false;
+            default:
+                ExperimentModel experimentModel = registryClient.getExperiment(experimentId);
+
+                ComputeResourcePreference computeResourcePreference = registryClient.getGatewayComputeResourcePreference
+                        (gatewayId,
+                                experimentModel.getUserConfigurationData().getComputationalResourceScheduling().getResourceHostId());
+                String token = computeResourcePreference.getResourceSpecificCredentialStoreToken();
+                if (token == null || token.isEmpty()){
+                    // try with gateway profile level token
+                    GatewayResourceProfile gatewayProfile = registryClient.getGatewayResourceProfile(gatewayId);
+                    token = gatewayProfile.getCredentialStoreToken();
+                }
+                // still the token is empty, then we fail the experiment
+                if (token == null || token.isEmpty()){
+                    log.error("You have not configured credential store token at gateway profile or compute resource preference." +
+                            " Please provide the correct token at gateway profile or compute resource preference.");
+                    return false;
+                }
+
+                orchestrator.cancelExperiment(experimentModel, token);
+                // TODO deprecate this approach as we are replacing gfac
+                String expCancelNodePath = ZKPaths.makePath(ZKPaths.makePath(ZkConstants.ZOOKEEPER_EXPERIMENT_NODE,
+                        experimentId), ZkConstants.ZOOKEEPER_CANCEL_LISTENER_NODE);
+                Stat stat = curatorClient.checkExists().forPath(expCancelNodePath);
+                if (stat != null) {
+                    curatorClient.setData().withVersion(-1).forPath(expCancelNodePath, ZkConstants.ZOOKEEPER_CANCEL_REQEUST
+                            .getBytes());
+                    ExperimentStatus status = new ExperimentStatus(ExperimentState.CANCELING);
+                    status.setReason("Experiment cancel request processed");
+                    status.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());
+                    OrchestratorUtils.updateAndPublishExperimentStatus(experimentId, status, publisher, gatewayId);
+                    log.info("expId : " + experimentId + " :- Experiment status updated to " + status.getState());
+                    return true;
+                }
+                return false;
+        }
+    }
+
+    private void launchWorkflowExperiment(String experimentId, String airavataCredStoreToken, String gatewayId) throws TException {
+        // FIXME
+//        try {
+//            WorkflowEnactmentService.getInstance().
+//                    submitWorkflow(experimentId, airavataCredStoreToken, getGatewayName(), getRabbitMQProcessPublisher());
+//        } catch (Exception e) {
+//            log.error("Error while launching workflow", e);
+//        }
+    }
+
+    private void startCurator() throws ApplicationSettingsException {
+        String connectionSting = ServerSettings.getZookeeperConnection();
+        RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 5);
+        curatorClient = CuratorFrameworkFactory.newClient(connectionSting, retryPolicy);
+        curatorClient.start();
+    }
+
+    private class SingleAppExperimentRunner implements Runnable {
+
+        String experimentId;
+        String airavataCredStoreToken;
+        String gatewayId;
+
+        public SingleAppExperimentRunner(String experimentId, String airavataCredStoreToken, String gatewayId) {
+            this.experimentId = experimentId;
+            this.airavataCredStoreToken = airavataCredStoreToken;
+            this.gatewayId = gatewayId;
+        }
+
+        @Override
+        public void run() {
+            try {
+                launchSingleAppExperiment();
+            } catch (TException e) {
+                log.error("Unable to launch experiment..", e);
+                throw new RuntimeException("Error while launching experiment", e);
+            } catch (AiravataException e) {
+                log.error("Unable to publish experiment status..", e);
+            }
+        }
+
+        private boolean launchSingleAppExperiment() throws TException, AiravataException {
+            final RegistryService.Client registryClient = getRegistryServiceClient();
+            try {
+                List<String> processIds = registryClient.getProcessIds(experimentId);
+                for (String processId : processIds) {
+                    launchProcess(processId, airavataCredStoreToken, gatewayId);
+                }
+//				ExperimentStatus status = new ExperimentStatus(ExperimentState.LAUNCHED);
+//				status.setReason("submitted all processes");
+//				status.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());
+//				OrchestratorUtils.updageAndPublishExperimentStatus(experimentId, status);
+//				log.info("expId: {}, Launched experiment ", experimentId);
+            } catch (Exception e) {
+                ExperimentStatus status = new ExperimentStatus(ExperimentState.FAILED);
+                status.setReason("Error while updating task status");
+                OrchestratorUtils.updateAndPublishExperimentStatus(experimentId, status, publisher, gatewayId);
+                log.error("expId: " + experimentId + ", Error while updating task status, hence updated experiment status to " +
+                        ExperimentState.FAILED, e);
+                ExperimentStatusChangeEvent event = new ExperimentStatusChangeEvent(ExperimentState.FAILED,
+                        experimentId,
+                        gatewayId);
+                String messageId = AiravataUtils.getId("EXPERIMENT");
+                MessageContext messageContext = new MessageContext(event, MessageType.EXPERIMENT, messageId, gatewayId);
+                messageContext.setUpdatedTime(AiravataUtils.getCurrentTimestamp());
+                publisher.publish(messageContext);
+                throw new TException(e);
+            } finally {
+                if (registryClient != null) {
+                    ThriftUtils.close(registryClient);
+                }
+            }
+            return true;
+        }
+
+    }
+
+
+    private class ProcessStatusHandler implements MessageHandler {
+        /**
+         * This method only handle MessageType.PROCESS type messages.
+         * @param message
+         */
+        @Override
+        public void onMessage(MessageContext message) {
+            if (message.getType().equals(MessageType.PROCESS)) {
+                try {
+                    ProcessStatusChangeEvent processStatusChangeEvent = new ProcessStatusChangeEvent();
+                    TBase event = message.getEvent();
+                    byte[] bytes = ThriftUtils.serializeThriftObject(event);
+                    ThriftUtils.createThriftFromBytes(bytes, processStatusChangeEvent);
+                    ExperimentStatus status = new ExperimentStatus();
+                    ProcessIdentifier processIdentity = processStatusChangeEvent.getProcessIdentity();
+                    log.info("expId: {}, processId: {} :- Process status changed event received for status {}",
+                            processIdentity.getExperimentId(), processIdentity.getProcessId(),
+                            processStatusChangeEvent.getState().name());
+                    switch (processStatusChangeEvent.getState()) {
+//						case CREATED:
+//						case VALIDATED:
+                        case STARTED:
+                            try {
+                                ExperimentStatus stat = OrchestratorUtils.getExperimentStatus(processIdentity
+                                        .getExperimentId());
+                                if (stat.getState() == ExperimentState.CANCELING) {
+                                    status.setState(ExperimentState.CANCELING);
+                                    status.setReason("Process started but experiment cancelling is triggered");
+                                } else {
+                                    status.setState(ExperimentState.EXECUTING);
+                                    status.setReason("process  started");
+                                }
+                            } catch (ApplicationSettingsException e) {
+                                throw new RuntimeException("Error ", e);
+                            }
+                            break;
+//						case PRE_PROCESSING:
+//							break;
+//						case CONFIGURING_WORKSPACE:
+//						case INPUT_DATA_STAGING:
+//						case EXECUTING:
+//						case MONITORING:
+//						case OUTPUT_DATA_STAGING:
+//						case POST_PROCESSING:
+//						case CANCELLING:
+//							break;
+                        case COMPLETED:
+                            try {
+                                ExperimentStatus stat = OrchestratorUtils.getExperimentStatus(processIdentity
+                                        .getExperimentId());
+                                if (stat.getState() == ExperimentState.CANCELING) {
+                                    status.setState(ExperimentState.CANCELED);
+                                    status.setReason("Process competed but experiment cancelling is triggered");
+                                } else {
+                                    status.setState(ExperimentState.COMPLETED);
+                                    status.setReason("process  completed");
+                                }
+                            }  catch (ApplicationSettingsException e) {
+                                throw new RuntimeException("Error ", e);
+                            }
+                            break;
+                        case FAILED:
+                            try {
+                                ExperimentStatus stat = OrchestratorUtils.getExperimentStatus(processIdentity
+                                        .getExperimentId());
+                                if (stat.getState() == ExperimentState.CANCELING) {
+                                    status.setState(ExperimentState.CANCELED);
+                                    status.setReason("Process failed but experiment cancelling is triggered");
+                                } else {
+                                    status.setState(ExperimentState.FAILED);
+                                    status.setReason("process  failed");
+                                }
+                            } catch (ApplicationSettingsException e) {
+                                throw new RuntimeException("Unable to create registry client...", e);
+                            }
+                            break;
+                        case CANCELED:
+                            // TODO if experiment have more than one process associated with it, then this should be changed.
+                            status.setState(ExperimentState.CANCELED);
+                            status.setReason("process  cancelled");
+                            break;
+                        default:
+                            // ignore other status changes, thoes will not affect for experiment status changes
+                            return;
+                    }
+                    if (status.getState() != null) {
+                        status.setTimeOfStateChange(AiravataUtils.getCurrentTimestamp().getTime());
+                        OrchestratorUtils.updateAndPublishExperimentStatus(processIdentity.getExperimentId(), status, publisher,  processIdentity.getGatewayId());
+                        log.info("expId : " + processIdentity.getExperimentId() + " :- Experiment status updated to " +
+                                status.getState());
+                    }
+                } catch (TException e) {
+                    log.error("Message Id : " + message.getMessageId() + ", Message type : " + message.getType() +
+                            "Error" + " while prcessing process status change event");
+                    throw new RuntimeException("Error while updating experiment status", e);
+                }
+            } else {
+                System.out.println("Message Recieved with message id " + message.getMessageId() + " and with message " +
+                        "type " + message.getType().name());
+            }
+        }
+    }
+
+    private class ExperimentHandler implements MessageHandler {
+
+        @Override
+        public void onMessage(MessageContext messageContext) {
+            MDC.put(MDCConstants.GATEWAY_ID, messageContext.getGatewayId());
+            switch (messageContext.getType()) {
+                case EXPERIMENT:
+                    launchExperiment(messageContext);
+                    break;
+                case EXPERIMENT_CANCEL:
+                    cancelExperiment(messageContext);
+                    break;
+                default:
+                    experimentSubscriber.sendAck(messageContext.getDeliveryTag());
+                    log.error("Orchestrator got un-support message type : " + messageContext.getType());
+                    break;
+            }
+            MDC.clear();
+        }
+
+        private void cancelExperiment(MessageContext messageContext) {
+            try {
+                byte[] bytes = ThriftUtils.serializeThriftObject(messageContext.getEvent());
+                ExperimentSubmitEvent expEvent = new ExperimentSubmitEvent();
+                ThriftUtils.createThriftFromBytes(bytes, expEvent);
+                log.info("Cancelling experiment with experimentId: {} gateway Id: {}", expEvent.getExperimentId(), expEvent.getGatewayId());
+                terminateExperiment(expEvent.getExperimentId(), expEvent.getGatewayId());
+            } catch (TException e) {
+                log.error("Error while cancelling experiment", e);
+                throw new RuntimeException("Error while cancelling experiment", e);
+            }finally {
+                experimentSubscriber.sendAck(messageContext.getDeliveryTag());
+            }
+
+        }
+    }
+
+    private void launchExperiment(MessageContext messageContext) {
+        ExperimentSubmitEvent expEvent = new ExperimentSubmitEvent();
+        final RegistryService.Client registryClient = getRegistryServiceClient();
+        try {
+            byte[] bytes = ThriftUtils.serializeThriftObject(messageContext.getEvent());
+            ThriftUtils.createThriftFromBytes(bytes, expEvent);
+            MDC.put(MDCConstants.EXPERIMENT_ID, expEvent.getExperimentId());
+            log.info("Launching experiment with experimentId: {} gateway Id: {}", expEvent.getExperimentId(), expEvent.getGatewayId());
+            if (messageContext.isRedeliver()) {
+                ExperimentModel experimentModel = registryClient.
+                        getExperiment(expEvent.getExperimentId());
+                MDC.put(MDCConstants.EXPERIMENT_NAME, experimentModel.getExperimentName());
+                if (experimentModel.getExperimentStatus().get(0).getState() == ExperimentState.CREATED) {
+                    launchExperiment(expEvent.getExperimentId(), expEvent.getGatewayId());
+                }
+            } else {
+                launchExperiment(expEvent.getExperimentId(), expEvent.getGatewayId());
+            }
+        } catch (TException e) {
+            String logMessage = expEvent.getExperimentId() != null && expEvent.getGatewayId() != null ?
+                    String.format("Experiment launch failed due to Thrift conversion error, experimentId: %s, gatewayId: %s",
+                            expEvent.getExperimentId(), expEvent.getGatewayId()) : "Experiment launch failed due to Thrift conversion error";
+            log.error(logMessage, e);
+        } catch (Exception e) {
+            log.error("An unknown issue while launching experiment " + Optional.ofNullable(expEvent.getExperimentId()).orElse("missing experiment") +
+                    " on gateway " + Optional.ofNullable(expEvent.getGatewayId()).orElse("missing gateway"), e);
+        } finally {
+            experimentSubscriber.sendAck(messageContext.getDeliveryTag());
+            MDC.clear();
+            if (registryClient != null) {
+                ThriftUtils.close(registryClient);
+            }
+        }
+    }
+
+    private RegistryService.Client getRegistryServiceClient() {
+        try {
+            final int serverPort = Integer.parseInt(ServerSettings.getRegistryServerPort());
+            final String serverHost = ServerSettings.getRegistryServerHost();
+            return RegistryServiceClientFactory.createRegistryClient(serverHost, serverPort);
+        } catch (RegistryServiceException |ApplicationSettingsException e) {
+            throw new RuntimeException("Unable to create registry client...", e);
+        }
     }
 }
