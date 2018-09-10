@@ -38,10 +38,8 @@ public class WorkflowParticipant extends HelixParticipant<WorkflowTask> {
 
     private final static String[] taskClassNames = {
             "org.apache.airavata.workflow.core.ApplicationTask",
-            "org.apache.airavata.workflow.handler.DoWhileLoopTask",
             "org.apache.airavata.workflow.handler.FlowStarterTask",
-            "org.apache.airavata.workflow.handler.FlowTerminatorTask",
-            "org.apache.airavata.workflow.handler.ForeachLoopTask",
+            "org.apache.airavata.workflow.handler.FlowTerminatorTask"
     };
 
     @SuppressWarnings("WeakerAccess")

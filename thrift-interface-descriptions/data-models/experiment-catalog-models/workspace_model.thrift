@@ -75,7 +75,7 @@ struct Gateway {
     1: optional string airavataInternalGatewayId,
     2: required string gatewayId,
     3: required GatewayApprovalStatus gatewayApprovalStatus,
-    4: optional string gatewayName,
+    4: optional string gatewayId,
     5: optional string domain,
     6: optional string emailAddress
     7: optional string gatewayAcronym,

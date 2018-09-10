@@ -20,7 +20,6 @@
 package org.apache.airavata.messaging.core;
 
 public enum Type {
-    WORKFLOW,
     EXPERIMENT_LAUNCH,
     PROCESS_LAUNCH,
     STATUS

@@ -28,36 +28,25 @@ public abstract class WorkflowTask extends AbstractTask {
 
     private final static Logger logger = LoggerFactory.getLogger(WorkflowTask.class);
 
-    private WorkflowDataBlock dataBlock;
-
     @TaskParam(name = "workflowId")
     private String workflowId;
 
-    @TaskParam(name = "workflowName")
-    private String workflowName;
-
-    public WorkflowTask setDataBlock(WorkflowDataBlock dataBlock) {
-        this.dataBlock = dataBlock;
-        return this;
-    }
+    @TaskParam(name = "gatewayId")
+    private String gatewayId;
 
     public void setWorkflowId(String workflowId) {
         this.workflowId = workflowId;
     }
 
-    public void setWorkflowName(String workflowName) {
-        this.workflowName = workflowName;
-    }
-
-    public WorkflowDataBlock getDataBlock() {
-        return dataBlock;
+    public void setGatewayId(String gatewayId) {
+        this.gatewayId = gatewayId;
     }
 
     public String getWorkflowId() {
         return workflowId;
     }
 
-    public String getWorkflowName() {
-        return workflowName;
+    public String getGatewayId() {
+        return gatewayId;
     }
 }

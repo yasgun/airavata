@@ -61,7 +61,7 @@ struct CredentialSummary {
 }
 
 struct CommunityUser {
-    1: required string gatewayName,
+    1: required string gatewayId,
     2: required string username,
     3: required string userEmail
 }

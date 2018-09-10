@@ -19,24 +19,18 @@
  */
 package org.apache.airavata.orchestrator.workflow;
 
-import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
 import org.apache.airavata.common.utils.ServerSettings;
 import org.apache.airavata.common.utils.ThriftClientPool;
-import org.apache.airavata.common.utils.ThriftUtils;
 import org.apache.airavata.helix.core.OutPort;
 import org.apache.airavata.helix.core.util.MonitoringUtil;
 import org.apache.airavata.helix.workflow.WorkflowOperator;
-import org.apache.airavata.messaging.core.*;
-import org.apache.airavata.model.messaging.event.WorkflowSubmitEvent;
 import org.apache.airavata.model.workflow.*;
 import org.apache.airavata.orchestrator.core.exception.OrchestratorException;
-import org.apache.airavata.orchestrator.workflow.core.ApplicationTask;
+import org.apache.airavata.orchestrator.workflow.application.ApplicationTask;
 import org.apache.airavata.orchestrator.workflow.core.WorkflowTask;
-import org.apache.airavata.orchestrator.workflow.handler.DoWhileLoopTask;
 import org.apache.airavata.orchestrator.workflow.handler.FlowStarterTask;
 import org.apache.airavata.orchestrator.workflow.handler.FlowTerminatorTask;
-import org.apache.airavata.orchestrator.workflow.handler.ForeachLoopTask;
 import org.apache.airavata.registry.api.RegistryService;
 import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.curator.RetryPolicy;
@@ -63,23 +57,16 @@ public class WorkflowManager {
     private WorkflowOperator workflowOperator;
 
     private ThriftClientPool<RegistryService.Client> registryClientPool;
-
-    private Publisher statusPublisher;
-    private Subscriber workflowSubscriber;
     private CuratorFramework curatorClient;
 
     public WorkflowManager() throws ApplicationSettingsException, TException, OrchestratorException {
         this.workflowManagerName = ServerSettings.getSetting("user.workflow.manager.name");
     }
 
-    private void initComponents() throws Exception {
+    public void initComponents() throws Exception {
         initRegistryClientPool();
         initWorkflowOperator();
-        initStatusPublisher();
         initCurator();
-
-        //start accepting workflow after all initializations are complete
-        initWorkflowSubscriber();
     }
 
     private void initWorkflowOperator() throws Exception {
@@ -87,10 +74,6 @@ public class WorkflowManager {
                 ServerSettings.getSetting("helix.cluster.name"),
                 workflowManagerName,
                 ServerSettings.getZookeeperConnection());
-    }
-
-    private void initStatusPublisher() throws AiravataException {
-        this.statusPublisher = MessagingFactory.getPublisher(Type.STATUS);
     }
 
     private void initCurator() throws ApplicationSettingsException {
@@ -116,30 +99,19 @@ public class WorkflowManager {
                 Integer.parseInt(ServerSettings.getRegistryServerPort()));
     }
 
-    private void initWorkflowSubscriber() throws AiravataException {
-        List<String> routingKeys = new ArrayList<>();
-        routingKeys.add(ServerSettings.getRabbitmqWorkflowLaunchQueueName());
-        this.workflowSubscriber = MessagingFactory.getSubscriber(new WorkflowMessageHandler(), routingKeys, Type.WORKFLOW);
-    }
-
-    public static void main(String[] args) throws Exception {
-        WorkflowManager workflowManager = new WorkflowManager();
-        workflowManager.initComponents();
-    }
-
-    public ThriftClientPool<RegistryService.Client> getRegistryClientPool() {
+    private ThriftClientPool<RegistryService.Client> getRegistryClientPool() {
         return registryClientPool;
     }
 
-    public CuratorFramework getCuratorClient() {
+    private CuratorFramework getCuratorClient() {
         return curatorClient;
     }
 
-    public WorkflowOperator getWorkflowOperator() {
+    private WorkflowOperator getWorkflowOperator() {
         return workflowOperator;
     }
 
-    public void launchWorkflow(String workflowId, String gatewayId) throws OrchestratorException {
+    private void launchWorkflow(String workflowId, String gatewayId) throws OrchestratorException {
         RegistryService.Client registryClient = getRegistryClientPool().getResource();
 
         AiravataWorkflow workflow;
@@ -147,10 +119,9 @@ public class WorkflowManager {
         try {
             workflow = registryClient.getWorkflow(workflowId);
             getRegistryClientPool().returnResource(registryClient);
-
         } catch (TException e) {
             getRegistryClientPool().returnBrokenResource(registryClient);
-            throw new OrchestratorException("Failed to fetch workflow from registry associated with workflow id " + workflowId, e);
+            throw new OrchestratorException("Failed to fetch workflow with id: " + workflowId, e);
         }
 
         List<WorkflowApplication> workflowApps = workflow.getApplications();
@@ -163,46 +134,33 @@ public class WorkflowManager {
             WorkflowTask workflowTask = new ApplicationTask();
             workflowTask.setTaskId(app.getId());
             workflowTask.setWorkflowId(workflowId);
-            workflowTask.setWorkflowName(workflow.getName());
+            workflowTask.setGatewayId(gatewayId);
             workflowTasks.put(app.getId(), workflowTask);
         }
 
         for (WorkflowHandler handler : workflowHandlers) {
-            if (handler.isBelongsToMainWorkflow()) {
-                WorkflowTask workflowTask = null;
+            WorkflowTask workflowTask = null;
 
-                if (handler.getType() == HandlerType.DOWHILE_LOOP) {
-                    workflowTask = new DoWhileLoopTask();
+            if (handler.getType() == HandlerType.FLOW_STARTER) {
+                workflowTask = new FlowStarterTask();
 
-                } else if (handler.getType() == HandlerType.FOREACH_LOOP) {
-                    workflowTask = new ForeachLoopTask();
+            } else if (handler.getType() == HandlerType.FLOW_TERMINATOR) {
+                workflowTask = new FlowTerminatorTask();
+            } else {
+                logger.error("Application type: " + handler.getType() + " is not supported in workflow with id: " + workflowId);
+            }
 
-                } else if (handler.getType() == HandlerType.FLOW_STARTER) {
-                    workflowTask = new FlowStarterTask();
-
-                } else if (handler.getType() == HandlerType.FLOW_TERMINATOR) {
-                    workflowTask = new FlowTerminatorTask();
-
-                    logger.error("Application type: " + handler.getType() + " is not supported");
-                } else {
-                    logger.error("Application type: " + handler.getType() + " is not supported");
-                }
-
-                if (workflowTask != null) {
-                    workflowTask.setTaskId(handler.getId());
-                    workflowTask.setWorkflowId(workflowId);
-                    workflowTask.setWorkflowName(workflow.getName());
-                    workflowTasks.put(handler.getId(), workflowTask);
-                }
+            if (workflowTask != null) {
+                workflowTask.setTaskId(handler.getId());
+                workflowTask.setWorkflowId(workflowId);
+                workflowTask.setGatewayId(gatewayId);
+                workflowTasks.put(handler.getId(), workflowTask);
             }
         }
 
         for (WorkflowConnection connection : workflowConnections) {
-            if (connection.isBelongsToMainWorkflow()) {
-                workflowTasks.get(connection.getFromId())
-                        .setNextTask(new OutPort(connection.getToId(),
-                                workflowTasks.get(connection.getToId())));
-            }
+            workflowTasks.get(connection.getFromId())
+                    .setNextTask(new OutPort(connection.getToId(), workflowTasks.get(connection.getToId())));
         }
 
         String workflowName;
@@ -222,70 +180,31 @@ public class WorkflowManager {
         }
     }
 
-    private class WorkflowMessageHandler implements MessageHandler {
-        @Override
-        public void onMessage(MessageContext messageContext) {
-            switch (messageContext.getType()) {
-                case WORKFLOW_LAUNCH:
-                    try {
-                        WorkflowSubmitEvent submitEvent = new WorkflowSubmitEvent();
-                        final RegistryService.Client registryClient = getRegistryClientPool().getResource();
+    public void launchWorkflowExperiment(String experimentId, String airavataCredStoreToken, String gatewayId)
+            throws OrchestratorException {
 
-                        try {
-                            try {
-                                byte[] bytes = ThriftUtils.serializeThriftObject(messageContext.getEvent());
-                                ThriftUtils.createThriftFromBytes(bytes, submitEvent);
-                            } catch (TException e) {
-                                throw new OrchestratorException("Workflow launch failed due to Thrift conversion error", e);
-                            }
+        RegistryService.Client registryClient = getRegistryClientPool().getResource();
+        try {
+            String workflowId;
+            AiravataWorkflow workflow;
 
-                            logger.info("Launching experiment with experiment id: " + submitEvent.getWorkflowId() +
-                                    " gateway id: " + submitEvent.getGatewayId());
-
-                            if (messageContext.isRedeliver()) {
-                                AiravataWorkflow workflow;
-
-                                try {
-                                    workflow = registryClient.getWorkflow(submitEvent.getWorkflowId());
-                                    getRegistryClientPool().returnResource(registryClient);
-
-                                } catch (TException e) {
-                                    getRegistryClientPool().returnBrokenResource(registryClient);
-                                    throw new OrchestratorException("Failed to fetch workflow from registry associated with workflow id " + submitEvent.getWorkflowId(), e);
-                                }
-
-                                if (workflow.getStatuses().get(0).getState() == WorkflowState.CREATED) {
-                                    launchWorkflow(submitEvent.getWorkflowId(), submitEvent.getGatewayId());
-                                }
-
-                            } else {
-                                launchWorkflow(submitEvent.getWorkflowId(), submitEvent.getGatewayId());
-                            }
-
-                        } catch (OrchestratorException e) {
-                            throw new OrchestratorException("Error occurred while handling workflow launch message with id: " +
-                                    messageContext.getMessageId() + " from gateway with id: " + messageContext.getGatewayId(), e);
-                        } finally {
-                            workflowSubscriber.sendAck(messageContext.getDeliveryTag());
-                            getRegistryClientPool().returnResource(registryClient);
-                        }
-
-                    } catch (Exception e) {
-                        //All exceptions sink here allowing message handler to continue
-                        logger.error("Error occurred while handling workflow launch message", e);
-                    }
-                    break;
-                case WORKFLOW_CANCEL:
-                    break;
-                case WORKFLOW_PAUSE:
-                    break;
-                case WORKFLOW_RESTART:
-                    break;
-                default:
-                    workflowSubscriber.sendAck(messageContext.getDeliveryTag());
-                    logger.error("Orchestrator received an unsupported message type: " + messageContext.getType());
-                    break;
+            try {
+                workflowId = registryClient.getWorkflowId(experimentId);
+                workflow = registryClient.getWorkflow(workflowId);
+            } catch (TException e) {
+                getRegistryClientPool().returnBrokenResource(registryClient);
+                throw new OrchestratorException("Failed to fetch workflow associated with experiment id: " + experimentId, e);
             }
+
+            if (workflow.getStatuses().get(0).getState() == WorkflowState.CREATED) {
+                launchWorkflow(workflowId, gatewayId);
+            }
+
+        } catch (OrchestratorException e) {
+            throw new OrchestratorException("Error occurred while launching workflow experiment with id: " +
+                    experimentId + " from gateway with id: " + gatewayId, e);
+        } finally {
+            getRegistryClientPool().returnResource(registryClient);
         }
     }
 }

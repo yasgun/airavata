@@ -55,6 +55,7 @@ import org.apache.airavata.orchestrator.cpi.impl.SimpleOrchestratorImpl;
 import org.apache.airavata.orchestrator.cpi.orchestrator_cpiConstants;
 import org.apache.airavata.orchestrator.util.OrchestratorServerThreadPoolExecutor;
 import org.apache.airavata.orchestrator.util.OrchestratorUtils;
+import org.apache.airavata.orchestrator.workflow.WorkflowManager;
 import org.apache.airavata.registry.api.RegistryService;
 import org.apache.airavata.registry.api.client.RegistryServiceClientFactory;
 import org.apache.airavata.registry.api.exception.RegistryServiceException;
@@ -75,6 +76,7 @@ import java.util.*;
 
 public class OrchestratorServerHandler implements OrchestratorService.Iface {
 	private static Logger log = LoggerFactory.getLogger(OrchestratorServerHandler.class);
+	private WorkflowManager workflowManager;
 	private SimpleOrchestratorImpl orchestrator = null;
 	private static Integer mutex = new Integer(-1);
 	private String airavataUserName;
@@ -94,6 +96,10 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 	public OrchestratorServerHandler() throws OrchestratorException, TException {
 		// orchestrator init
 		try {
+			// initializing workflow manager
+			workflowManager = new WorkflowManager();
+			workflowManager.initComponents();
+
 			// first constructing the monitorManager and orchestrator, then fill
 			// the required properties
 			setAiravataUserName(ServerSettings.getDefaultUser());
@@ -105,7 +111,7 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 			statusSubscribe = getStatusSubscriber();
 			experimentSubscriber  = getExperimentSubscriber();
 			startCurator();
-		} catch (OrchestratorException | AiravataException e) {
+		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			throw new OrchestratorException("Error while initializing orchestrator service", e);
 		}
@@ -245,7 +251,7 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
             } else if (executionType == ExperimentType.WORKFLOW) {
                 //its a workflow execution experiment
                 log.debug(experimentId, "Launching workflow experiment {}.", experimentId);
-                launchWorkflowExperiment(experimentId, token, gatewayId);
+                workflowManager.launchWorkflowExperiment(experimentId, token, gatewayId);
             } else {
                 log.error(experimentId, "Couldn't identify experiment type, experiment {} is neither single application nor workflow.", experimentId);
                 throw new TException("Experiment '" + experimentId + "' launch failed. Unable to figureout execution type for application " + experiment.getExecutionId());
@@ -477,16 +483,6 @@ public class OrchestratorServerHandler implements OrchestratorService.Iface {
 				}
 				return false;
 		}
-    }
-
-    private void launchWorkflowExperiment(String experimentId, String airavataCredStoreToken, String gatewayId) throws TException {
-        // FIXME
-//        try {
-//            WorkflowEnactmentService.getInstance().
-//                    submitWorkflow(experimentId, airavataCredStoreToken, getGatewayName(), getRabbitMQProcessPublisher());
-//        } catch (Exception e) {
-//            log.error("Error while launching workflow", e);
-//        }
     }
 
 	private void startCurator() throws ApplicationSettingsException {

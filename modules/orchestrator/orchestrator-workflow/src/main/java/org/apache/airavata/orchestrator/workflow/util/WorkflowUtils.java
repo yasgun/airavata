@@ -22,7 +22,10 @@ package org.apache.airavata.orchestrator.workflow.util;
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.exception.ApplicationSettingsException;
 import org.apache.airavata.common.utils.AiravataUtils;
+import org.apache.airavata.common.utils.DBUtil;
 import org.apache.airavata.common.utils.ServerSettings;
+import org.apache.airavata.credential.store.store.CredentialReader;
+import org.apache.airavata.credential.store.store.impl.CredentialReaderImpl;
 import org.apache.airavata.messaging.core.MessageContext;
 import org.apache.airavata.messaging.core.Publisher;
 import org.apache.airavata.model.messaging.event.ExperimentStatusChangeEvent;
@@ -69,4 +72,19 @@ public class WorkflowUtils {
 		}
 	}
 
+	public static CredentialReader getCredentialReader()
+			throws ApplicationSettingsException, IllegalAccessException,
+			InstantiationException {
+		try {
+			String jdbcUrl = ServerSettings.getCredentialStoreDBURL();
+			String jdbcUsr = ServerSettings.getCredentialStoreDBUser();
+			String jdbcPass = ServerSettings.getCredentialStoreDBPassword();
+			String driver = ServerSettings.getCredentialStoreDBDriver();
+			return new CredentialReaderImpl(new DBUtil(jdbcUrl, jdbcUsr, jdbcPass,
+					driver));
+		} catch (ClassNotFoundException e) {
+			log.error("Not able to find driver: " + e.getLocalizedMessage());
+			return null;
+		}
+	}
 }

@@ -76,6 +76,7 @@ import org.apache.airavata.model.status.QueueStatusModel;
 import org.apache.airavata.model.status.TaskStatus;
 import org.apache.airavata.model.task.TaskModel;
 import org.apache.airavata.model.user.UserProfile;
+import org.apache.airavata.model.workflow.AiravataWorkflow;
 import org.apache.airavata.model.workspace.Gateway;
 import org.apache.airavata.model.workspace.Notification;
 import org.apache.airavata.model.workspace.Project;
@@ -107,12 +108,7 @@ import org.apache.airavata.registry.core.repositories.replicacatalog.DataProduct
 import org.apache.airavata.registry.core.repositories.replicacatalog.DataReplicaLocationRepository;
 import org.apache.airavata.registry.core.repositories.workflowcatalog.WorkflowRepository;
 import org.apache.airavata.registry.core.utils.DBConstants;
-import org.apache.airavata.registry.cpi.AppCatalogException;
-import org.apache.airavata.registry.cpi.ComputeResource;
-import org.apache.airavata.registry.cpi.ExpCatChildDataType;
-import org.apache.airavata.registry.cpi.ExperimentCatalogException;
-import org.apache.airavata.registry.cpi.RegistryException;
-import org.apache.airavata.registry.cpi.ResultOrderType;
+import org.apache.airavata.registry.cpi.*;
 import org.apache.airavata.registry.cpi.utils.Constants;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -4705,6 +4701,58 @@ public class RegistryServerHandler implements RegistryService.Iface {
             logger.error("Error while storing queue status models....", e);
             RegistryServiceException exception = new RegistryServiceException();
             exception.setMessage("Error while storing queue status models.... : " + e.getMessage());
+            throw exception;
+        }
+    }
+
+    @Override
+    public AiravataWorkflow getWorkflow(String workflowId) throws RegistryServiceException, TException {
+        try {
+            return workflowRepository.getWorkflow(workflowId);
+        } catch (WorkflowCatalogException e) {
+            String msg = "Error in retrieving the workflow " + workflowId + ".";
+            logger.error(msg, e);
+            RegistryServiceException exception = new RegistryServiceException();
+            exception.setMessage(msg + " More info : " + e.getMessage());
+            throw exception;
+        }
+    }
+
+    @Override
+    public void deleteWorkflow(String workflowId) throws RegistryServiceException, TException {
+        try {
+            workflowRepository.deleteWorkflow(workflowId);
+        } catch (WorkflowCatalogException e) {
+            String msg = "Error in deleting the workflow " + workflowId + ".";
+            logger.error(msg, e);
+            RegistryServiceException exception = new RegistryServiceException();
+            exception.setMessage(msg + " More info : " + e.getMessage());
+            throw exception;
+        }
+    }
+
+    @Override
+    public void updateWorkflow(String workflowId, AiravataWorkflow workflow) throws RegistryServiceException, TException {
+        try {
+            workflowRepository.updateWorkflow(workflowId, workflow);
+        } catch (WorkflowCatalogException e) {
+            String msg = "Error in updating the workflow " + workflowId + ".";
+            logger.error(msg, e);
+            RegistryServiceException exception = new RegistryServiceException();
+            exception.setMessage(msg + " More info : " + e.getMessage());
+            throw exception;
+        }
+    }
+
+    @Override
+    public String getWorkflowId(String experimentId) throws RegistryServiceException, TException {
+        try {
+            return workflowRepository.getWorkflowId(experimentId);
+        } catch (WorkflowCatalogException e) {
+            String msg = "Error in retrieving the workflow id for experiment with id " + experimentId + ".";
+            logger.error(msg, e);
+            RegistryServiceException exception = new RegistryServiceException();
+            exception.setMessage(msg + " More info : " + e.getMessage());
             throw exception;
         }
     }

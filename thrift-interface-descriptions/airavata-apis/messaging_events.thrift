@@ -43,11 +43,7 @@ enum MessageType {
     LAUNCHPROCESS,
     TERMINATEPROCESS,
     PROCESSOUTPUT,
-    DB_EVENT,
-    WORKFLOW_LAUNCH,
-    WORKFLOW_CANCEL,
-    WORKFLOW_PAUSE,
-    WORKFLOW_RESTART,
+    DB_EVENT
 }
 
 struct ExperimentStatusChangeEvent {
@@ -114,11 +110,6 @@ struct JobIdentifier {
 //    //8:
 // }
 
-struct WorkflowSubmitEvent{
-    1: required string workflowId,
-    2: required string gatewayId,
-}
-
 struct ExperimentSubmitEvent{
     1: required string experimentId,
     2: required string gatewayId,
@@ -154,10 +145,3 @@ struct Message {
     4: optional i64 updatedTime;
     5: optional MessageLevel messageLevel;
 }
-
-
-
-
-
-
-

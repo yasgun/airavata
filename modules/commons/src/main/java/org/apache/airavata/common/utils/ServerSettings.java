@@ -95,10 +95,8 @@ public class ServerSettings extends ApplicationSettings {
     public static final String RABBITMQ_STATUS_EXCHANGE_NAME = "rabbitmq.status.exchange.name";
     public static final String RABBITMQ_PROCESS_EXCHANGE_NAME = "rabbitmq.process.exchange.name";
     public static final String RABBITMQ_EXPERIMENT_EXCHANGE_NAME = "rabbitmq.experiment.exchange.name";
-    public static final String RABBITMQ_WORKFLOW_EXCHANGE_NAME = "rabbitmq.workflow.exchange.name";
     public static final String RABBITMQ_PROCESS_LAUNCH_QUEUE_NAME = "process.launch.queue.name";
     public static final String RABBITMQ_EXPERIMENT_LAUNCH_QUEUE_NAME = "experiment.launch.queue.name";
-    public static final String RABBITMQ_WORKFLOW_LAUNCH_QUEUE_NAME = "workflow.launch.queue.name";
     public static final String RABBITMQ_DURABLE_QUEUE="durable.queue";
     public static final String RABBITMQ_PREFETCH_COUNT="prefetch.count";
 
@@ -160,10 +158,6 @@ public class ServerSettings extends ApplicationSettings {
         return getSetting(RABBITMQ_EXPERIMENT_EXCHANGE_NAME, "experiment.launch.queue");
     }
 
-    public static String getRabbitmqWorkflowLaunchQueueName() {
-        return getSetting(RABBITMQ_WORKFLOW_LAUNCH_QUEUE_NAME, "workflow.launch.queue");
-    }
-
     public static String getRabbitmqBrokerUrl() {
         return getSetting(RABBITMQ_BROKER_URL, "amqp://localhost:5672");
     }
@@ -178,10 +172,6 @@ public class ServerSettings extends ApplicationSettings {
 
     public static String getRabbitmqExperimentExchangeName() {
         return getSetting(RABBITMQ_EXPERIMENT_EXCHANGE_NAME, "experiment_exchange");
-    }
-
-    public static String getRabbitmqWorkflowExchangeName() {
-        return getSetting(RABBITMQ_WORKFLOW_EXCHANGE_NAME, "workflow_exchange");
     }
 
     public static boolean getRabbitmqDurableQueue(){

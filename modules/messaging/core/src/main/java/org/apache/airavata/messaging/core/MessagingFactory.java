@@ -42,12 +42,6 @@ public class MessagingFactory {
         RabbitMQProperties rProperties = getProperties();
 
         switch (type) {
-            case WORKFLOW:
-                subscriber = getWorkflowSubscriber(rProperties);
-                subscriber.listen(((connection, channel) -> new WorkflowConsumer(messageHandler, connection, channel)),
-                        rProperties.getQueueName(),
-                        routingKeys);
-                break;
             case EXPERIMENT_LAUNCH:
                 subscriber = getExperimentSubscriber(rProperties);
                 subscriber.listen(((connection, channel) -> new ExperimentConsumer(messageHandler, connection, channel)),
@@ -93,9 +87,6 @@ public class MessagingFactory {
         RabbitMQProperties rProperties = getProperties();
         Publisher publiser = null;
         switch (type) {
-            case WORKFLOW:
-                publiser = getWorkflowPublisher(rProperties);
-                break;
             case EXPERIMENT_LAUNCH:
                 publiser = getExperimentPublisher(rProperties);
                 break;
@@ -116,11 +107,6 @@ public class MessagingFactory {
         RabbitMQProperties rProperties = getProperties();
         rProperties.setExchangeName(DBEventManagerConstants.DB_EVENT_EXCHANGE_NAME);
         return new RabbitMQPublisher(rProperties);
-    }
-
-    private static Publisher getWorkflowPublisher(RabbitMQProperties rProperties) throws AiravataException {
-        rProperties.setExchangeName(ServerSettings.getRabbitmqWorkflowExchangeName());
-        return new RabbitMQPublisher(rProperties, messageContext -> rProperties.getExchangeName());
     }
 
     private static Publisher getExperimentPublisher(RabbitMQProperties rProperties) throws AiravataException {
@@ -165,13 +151,6 @@ public class MessagingFactory {
     private static Subscriber getExperimentSubscriber(RabbitMQProperties sp) throws AiravataException {
         sp.setExchangeName(ServerSettings.getRabbitmqExperimentExchangeName())
                 .setQueueName("experiment_launch")
-                .setAutoAck(false);
-        return new RabbitMQSubscriber(sp);
-    }
-
-    private static Subscriber getWorkflowSubscriber(RabbitMQProperties sp) throws AiravataException {
-        sp.setExchangeName(ServerSettings.getRabbitmqWorkflowExchangeName())
-                .setQueueName("workflow_launch")
                 .setAutoAck(false);
         return new RabbitMQSubscriber(sp);
     }

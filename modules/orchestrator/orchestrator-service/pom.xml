@@ -77,6 +77,12 @@
             <artifactId>cluster-monitoring</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.airavata</groupId>
+            <artifactId>airavata-orchestrator-workflow</artifactId>
+            <version>0.17-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <properties>
