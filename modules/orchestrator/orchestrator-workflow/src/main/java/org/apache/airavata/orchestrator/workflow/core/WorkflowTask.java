@@ -34,6 +34,10 @@ public abstract class WorkflowTask extends AbstractTask {
     @TaskParam(name = "gatewayId")
     private String gatewayId;
 
+    @TaskParam(name = "experimentId")
+    private String experimentId;
+
+
     public void setWorkflowId(String workflowId) {
         this.workflowId = workflowId;
     }
@@ -42,11 +46,19 @@ public abstract class WorkflowTask extends AbstractTask {
         this.gatewayId = gatewayId;
     }
 
+    public void setExperimentId(String experimentId) {
+        this.experimentId = experimentId;
+    }
+
     public String getWorkflowId() {
         return workflowId;
     }
 
     public String getGatewayId() {
         return gatewayId;
+    }
+
+    public String getExperimentId() {
+        return experimentId;
     }
 }

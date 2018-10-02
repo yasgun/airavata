@@ -111,7 +111,7 @@ public class WorkflowManager {
         return workflowOperator;
     }
 
-    private void launchWorkflow(String workflowId, String gatewayId) throws OrchestratorException {
+    private void launchWorkflow(String experimentId, String workflowId, String gatewayId) throws OrchestratorException {
         RegistryService.Client registryClient = getRegistryClientPool().getResource();
 
         AiravataWorkflow workflow;
@@ -133,6 +133,7 @@ public class WorkflowManager {
         for (WorkflowApplication app : workflowApps) {
             WorkflowTask workflowTask = new ApplicationTask();
             workflowTask.setTaskId(app.getId());
+            workflowTask.setExperimentId(experimentId);
             workflowTask.setWorkflowId(workflowId);
             workflowTask.setGatewayId(gatewayId);
             workflowTasks.put(app.getId(), workflowTask);
@@ -152,6 +153,7 @@ public class WorkflowManager {
 
             if (workflowTask != null) {
                 workflowTask.setTaskId(handler.getId());
+                workflowTask.setExperimentId(experimentId);
                 workflowTask.setWorkflowId(workflowId);
                 workflowTask.setGatewayId(gatewayId);
                 workflowTasks.put(handler.getId(), workflowTask);
@@ -197,7 +199,7 @@ public class WorkflowManager {
             }
 
             if (workflow.getStatuses().get(0).getState() == WorkflowState.CREATED) {
-                launchWorkflow(workflowId, gatewayId);
+                launchWorkflow(experimentId, workflowId, gatewayId);
             }
 
         } catch (OrchestratorException e) {
