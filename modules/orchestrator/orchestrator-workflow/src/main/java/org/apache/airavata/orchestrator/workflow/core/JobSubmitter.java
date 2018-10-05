@@ -25,7 +25,7 @@ public interface JobSubmitter {
 
     void initialize() throws OrchestratorException;
 
-    boolean submit(String experimentId, String processId, String tokenId) throws OrchestratorException;
+    void submit(String experimentId, String processId, String tokenId) throws OrchestratorException;
 
-    boolean terminate(String experimentId, String processId, String tokenId) throws OrchestratorException;
+    void terminate(String experimentId, String processId, String tokenId) throws OrchestratorException;
 }

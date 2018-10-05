@@ -2,12 +2,10 @@ package org.apache.airavata.orchestrator.workflow.application;
 
 import org.apache.airavata.common.exception.AiravataException;
 import org.apache.airavata.common.utils.AiravataUtils;
-import org.apache.airavata.common.utils.ThriftClientPool;
 import org.apache.airavata.common.utils.ThriftUtils;
 import org.apache.airavata.gfac.core.task.TaskException;
 import org.apache.airavata.model.appcatalog.appinterface.ApplicationInterfaceDescription;
 import org.apache.airavata.model.appcatalog.computeresource.*;
-import org.apache.airavata.model.appcatalog.gatewayprofile.ComputeResourcePreference;
 import org.apache.airavata.model.application.io.DataType;
 import org.apache.airavata.model.application.io.InputDataObjectType;
 import org.apache.airavata.model.application.io.OutputDataObjectType;
@@ -18,6 +16,7 @@ import org.apache.airavata.model.status.TaskState;
 import org.apache.airavata.model.status.TaskStatus;
 import org.apache.airavata.model.task.*;
 import org.apache.airavata.orchestrator.core.exception.OrchestratorException;
+import org.apache.airavata.orchestrator.core.utils.OrchestratorUtils;
 import org.apache.airavata.registry.api.RegistryService;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -32,14 +31,13 @@ public class TaskDAGHandler {
 
     private static Logger logger = LoggerFactory.getLogger(TaskDAGHandler.class);
 
-    private ThriftClientPool<RegistryService.Client> registryClientPool;
+    private RegistryService.Client registryClient;
 
-    public TaskDAGHandler(ThriftClientPool<RegistryService.Client> registryClientPool) {
-        this.registryClientPool = registryClientPool;
+    public TaskDAGHandler(RegistryService.Client registryClient) {
+        this.registryClient = registryClient;
     }
 
     public String createAndSaveTasks(String gatewayId, ProcessModel processModel, boolean autoSchedule) throws OrchestratorException {
-        RegistryService.Client registryClient = registryClientPool.getResource();
         try {
             ComputationalResourceSchedulingModel resourceSchedule = processModel.getProcessResourceSchedule();
             String userGivenQueueName = resourceSchedule.getQueueName();
@@ -50,12 +48,11 @@ public class TaskDAGHandler {
             }
             ComputeResourceDescription computeResource = registryClient.getComputeResource(resourceHostId);
             JobSubmissionInterface preferredJobSubmissionInterface =
-                    org.apache.airavata.orchestrator.core.utils.OrchestratorUtils.getPreferredJobSubmissionInterface(processModel, gatewayId);
-            ComputeResourcePreference resourcePreference =
-                    org.apache.airavata.orchestrator.core.utils.OrchestratorUtils.getComputeResourcePreference(processModel, gatewayId);
+                    OrchestratorUtils.getPreferredJobSubmissionInterface(processModel, gatewayId);
+            JobSubmissionProtocol preferredJobSubmissionProtocol = OrchestratorUtils.getPreferredJobSubmissionProtocol(processModel, gatewayId);
             List<String> taskIdList = new ArrayList<>();
 
-            if (resourcePreference.getPreferredJobSubmissionProtocol() == JobSubmissionProtocol.UNICORE) {
+            if (preferredJobSubmissionProtocol == JobSubmissionProtocol.UNICORE) {
                 // TODO - breakdown unicore all in one task to multiple tasks, then we don't need to handle UNICORE here.
                 taskIdList.addAll(createAndSaveSubmissionTasks(registryClient, gatewayId, preferredJobSubmissionInterface, processModel, userGivenWallTime));
             } else {
@@ -176,9 +173,8 @@ public class TaskDAGHandler {
         envSetupTask.setLastUpdateTime(AiravataUtils.getCurrentTimestamp().getTime());
         envSetupTask.setParentProcessId(processModel.getProcessId());
         EnvironmentSetupTaskModel envSetupSubModel = new EnvironmentSetupTaskModel();
-        envSetupSubModel.setProtocol(org.apache.airavata.orchestrator.core.utils.OrchestratorUtils.getSecurityProtocol(processModel, gatewayId));
-        ComputeResourcePreference computeResourcePreference = org.apache.airavata.orchestrator.core.utils.OrchestratorUtils.getComputeResourcePreference(processModel, gatewayId);
-        String scratchLocation = org.apache.airavata.orchestrator.core.utils.OrchestratorUtils.getScratchLocation(processModel, gatewayId);
+        envSetupSubModel.setProtocol(OrchestratorUtils.getSecurityProtocol(processModel, gatewayId));
+        String scratchLocation = OrchestratorUtils.getScratchLocation(processModel, gatewayId);
         String workingDir = scratchLocation + File.separator + processModel.getProcessId();
         envSetupSubModel.setLocation(workingDir);
         byte[] envSetupSub = ThriftUtils.serializeThriftObject(envSetupSubModel);
@@ -206,7 +202,6 @@ public class TaskDAGHandler {
                         break;
                     case URI:
                     case URI_COLLECTION:
-                        RegistryService.Client registryClient = registryClientPool.getResource();
                         try {
                             TaskModel inputDataStagingTask = getInputDataStagingTask(registryClient, processModel, processInput, gatewayId);
                             String taskId = registryClient
@@ -291,8 +286,6 @@ public class TaskDAGHandler {
 
     public List<String> createAndSaveOutputDataStagingTasks(ProcessModel processModel, String gatewayId)
             throws AiravataException, TException, OrchestratorException {
-
-        RegistryService.Client registryClient = registryClientPool.getResource();
         List<String> dataStagingTaskIds = new ArrayList<>();
         try {
             List<OutputDataObjectType> processOutputs = processModel.getProcessOutputs();

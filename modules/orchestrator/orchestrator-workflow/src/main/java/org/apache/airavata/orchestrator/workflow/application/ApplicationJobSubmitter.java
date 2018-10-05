@@ -57,7 +57,7 @@ public class ApplicationJobSubmitter implements JobSubmitter, Watcher {
         }
     }
 
-    public boolean submit(String experimentId, String processId, String tokenId) throws OrchestratorException {
+    public void submit(String experimentId, String processId, String tokenId) throws OrchestratorException {
         try {
             String gatewayId = null;
             CredentialReader credentialReader = WorkflowUtils.getCredentialReader();
@@ -82,12 +82,11 @@ public class ApplicationJobSubmitter implements JobSubmitter, Watcher {
             publisher.publish(messageContext);
         } catch (Exception e) {
             logger.error("Error while submitting process with id: " + processId + "of experiment with id: " + experimentId, e);
-            return false;
+            throw new OrchestratorException("Error while submitting process with id: " + processId + "of experiment with id: " + experimentId, e);
         }
-        return true;
     }
 
-    public boolean terminate(String experimentId, String processId, String tokenId) throws OrchestratorException {
+    public void terminate(String experimentId, String processId, String tokenId) throws OrchestratorException {
         try {
             String gatewayId = null;
 
@@ -112,10 +111,9 @@ public class ApplicationJobSubmitter implements JobSubmitter, Watcher {
             messageContext.setUpdatedTime(AiravataUtils.getCurrentTimestamp());
             publisher.publish(messageContext);
         } catch (Exception e) {
-            logger.error("Error while submitting process with id: " + processId + "of experiment with id: " + experimentId, e);
-            return false;
+            logger.error("Error while terminating process with id: " + processId + "of experiment with id: " + experimentId, e);
+            throw new OrchestratorException("Error while terminating process with id: " + processId + "of experiment with id: " + experimentId, e);
         }
-        return true;
     }
 
     //TODO Clarify
